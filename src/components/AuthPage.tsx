@@ -544,52 +544,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
             )}
           </div>
 
-          <div className="mt-4 border rounded-2xl p-4" style={{ background: '#FFFFFF', borderColor: '#C0BCB1' }}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold flex items-center space-x-1.5" style={{ color: '#171717' }}>
-                <KeyRound className="w-3 h-3" style={{ color: '#D21515' }} />
-                <span>Enterprise Demo Logins</span>
-              </span>
-              <span className="text-[9px] font-mono tracking-wider" style={{ color: '#6B6B6B' }}>5 DISTINCT ROLES</span>
-            </div>
-            <p className="text-[10px] mb-3 leading-relaxed" style={{ color: '#6B6B6B' }}>
-              Click any pre-authorized role account below to evaluate its dedicated workspace and strict permission boundaries.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {demoPersonas.map(({ role, user }) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => handleDemoLogin(user)}
-                  disabled={isLoading}
-                  className="auth-demo-login text-left p-2 rounded-lg transition flex items-center justify-between cursor-pointer"
-                  style={{ background: '#F0EFEA', border: '1px solid #C0BCB1' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#C0BCB1';
-                    e.currentTarget.style.background = '#C0BCB1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#C0BCB1';
-                    e.currentTarget.style.background = '#F0EFEA';
-                  }}
-                >
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#FFFFFF', border: '1px solid #C0BCB1' }}>
-                      {getRoleIcon(role)}
-                    </div>
-                    <div className="truncate">
-                      <div className="text-[11px] font-semibold truncate" style={{ color: '#171717' }}>{user.name}</div>
-                      <div className="text-[9px] truncate" style={{ color: '#6B6B6B' }}>{user.email}</div>
-                    </div>
-                  </div>
-                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold border shrink-0 ${getRoleBadgeStyle()}`}>
-                    {role}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+         
         </div>
       </div>
     </div>

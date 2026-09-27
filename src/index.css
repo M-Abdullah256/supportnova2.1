@@ -3523,3 +3523,21 @@ h3,
     transparent 1px 14px
   );
 }
+html,
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0px;
+  background: transparent;
+}
+/* In index.css */
+.support-app .admin-dashboard .admin-policy-card {
+  background: #E9E8E4 !important;
+  background-color: #E9E8E4 !important;
+  background-image: none !important;
+}
