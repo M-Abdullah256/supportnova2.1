@@ -17,12 +17,14 @@ import { AdminPortal } from './components/AdminPortal';
 import { ComplaintDetailModal } from './components/ComplaintDetailModal';
 import { AccessDenied } from './components/AccessDenied';
 import { AuthPage } from './components/AuthPage';
+import { LandingPage } from './components/LandingPage';
 import { UserProfileModal } from './components/UserProfileModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { INITIAL_USERS, DEPARTMENTS } from './data/initialData';
 import { RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState<boolean>(true);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
@@ -93,6 +95,7 @@ export default function App() {
           showNotification('error', 'Session expired. Please sign in again.');
           setCurrentUser(null);
           setAuthToken(null);
+          setShowLanding(true);
           localStorage.removeItem('supportnova_auth_user');
           localStorage.removeItem('supportnova_auth_token');
           throw new Error('Unauthorized');
@@ -176,6 +179,7 @@ export default function App() {
   const handleLoginSuccess = (user: UserProfile, token: string) => {
     setCurrentUser(user);
     setAuthToken(token);
+    setShowLanding(false);
     localStorage.setItem('supportnova_auth_user', JSON.stringify(user));
     localStorage.setItem('supportnova_auth_token', token);
     showNotification('success', `Welcome back, ${user.name}! Accessing ${user.role} workspace.`);
@@ -197,6 +201,7 @@ export default function App() {
     setCurrentUser(null);
     setAuthToken(null);
     setComplaints([]);
+    setShowLanding(true);
     showNotification('success', 'You have been safely signed out.');
   };
 
@@ -604,7 +609,26 @@ export default function App() {
   ).length;
 
   if (!currentUser || !authToken) {
-    return <AuthPage onLoginSuccess={handleLoginSuccess} users={users} />;
+    if (showLanding) {
+      return (
+        <LandingPage
+          onGetStarted={() => setShowLanding(false)}
+          onLogin={() => setShowLanding(false)}
+        />
+      );
+    }
+
+    return (
+      <div className="relative min-h-screen bg-[#0F0F0F]">
+        <button
+          onClick={() => setShowLanding(true)}
+          className="fixed top-4 left-4 z-50 px-3 py-1.5 text-xs font-semibold text-neutral-300 bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700 rounded-lg shadow transition cursor-pointer flex items-center gap-1.5"
+        >
+          ← Back to Home
+        </button>
+        <AuthPage onLoginSuccess={handleLoginSuccess} users={users} />
+      </div>
+    );
   }
 
   return (

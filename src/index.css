@@ -3371,3 +3371,155 @@ body {
 .customer-portal .customer-kpi:nth-child(4) strong {
   font-size: clamp(1.6rem, 2.5vw, 2.2rem);
 }
+/* ==========================================================================
+   NOIR THEME DESIGN SYSTEM (SupportNova Landing Page)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&family=Phudu:wght@300..900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --font-display-family: "Phudu", ui-sans-serif, system-ui, sans-serif;
+    --font-body-family: "Mona Sans", ui-sans-serif, system-ui, sans-serif;
+    --sand: oklch(79.5% .016 92);
+    --bone: oklch(93.5% .006 92);
+    --ink: oklch(17.5% .008 60);
+    --ink-foreground: oklch(93.5% .006 92);
+    --background: oklch(79.5% .016 92);
+    --foreground: oklch(93.5% .006 92);
+    --card: oklch(17.5% .008 60);
+    --card-foreground: oklch(93.5% .006 92);
+    --popover: oklch(17.5% .008 60);
+    --popover-foreground: oklch(93.5% .006 92);
+    --primary: oklch(54.5% .212 29);
+    --primary-foreground: oklch
+#f8f4f5
+(97% .005 92);
+    --secondary: oklch(72% .02 92);
+    --secondary-foreground: oklch(17.5% .008 60);
+    --muted: oklch(74% .018 92);
+    --muted-foreground: oklch(88.5% .008 92 / .72);
+    --accent: oklch(54.5% .212 29);
+    --accent-foreground: oklch(97% .005 92);
+    --destructive: oklch(54.5% .212 29);
+    --destructive-foreground: oklch(97% .005 92);
+    --border: oklch(93.5% .006 92 / .22);
+    --input: oklch(93.5% .006 92 / .3);
+    --ring: oklch(54.5% .212 29);
+
+}
+
+/* Display Headings (Exact Phudu font & weight) */
+.display {
+  font-family: var(--font-display-family) !important;
+  font-weight: 800 !important;
+  line-height: 0.88 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: uppercase !important;
+}
+
+/* Micro Labels */
+.label {
+  font-family: var(--font-mono-family) !important;
+  font-size: 0.6875rem !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+  line-height: 1.3 !important;
+}
+
+/* Side Ruler Ticks */
+.ticks {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(230, 226, 216, 0.22) 0 1px,
+    transparent 1px 14px
+  );
+}
+
+/* Smooth Infinite Marquee */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-x 28s linear infinite !important;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+/* ==========================================================================
+   GLOBAL APP-WIDE UNIFIED TYPOGRAPHY (NOIR THEME)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Mona+Sans:ital,wght@0,200..900;1,200..900&family=Phudu:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --font-display-family: 'Phudu', cursive, sans-serif;
+  --font-body-family: 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono-family: 'JetBrains Mono', monospace;
+}
+
+/* 1. Entire Application (Body, Divs, Buttons, Inputs, Tables, Modals) */
+html,
+body,
+#root,
+.support-app,
+input,
+button,
+textarea,
+select {
+  font-family: 'Mona Sans', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+}
+
+/* 2. All Headings & Display Titles Across the Whole App */
+h1,
+h2,
+h3,
+.display,
+.font-display {
+  font-family: 'Phudu', cursive, sans-serif !important;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+/* 3. Small Metadata, Badges & Labels */
+.label,
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* 4. Smooth Animation Utilities */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-x 28s linear infinite !important;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.ticks {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(230, 226, 216, 0.22) 0 1px,
+    transparent 1px 14px
+  );
+}
