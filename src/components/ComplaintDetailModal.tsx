@@ -4,42 +4,9 @@ import {
   X,
   ShieldCheck,
   AlertTriangle,
-  Bot,
-  Grid,
-  FileText,
-  Clock,
-  History,
-  CheckCircle2,
   Copy,
-  ExternalLink,
+  Check,
 } from 'lucide-react';
-
-// Palette
-const P = {
-  oliveGray: '#373F51',
-  warmGold: '#58A4B0',
-  burntSienna: '#A9BCD0',
-  darkOliveGold: '#506176',
-  deepMahogany: '#293241',
-  bgDark: '#373F51',
-  bgCard: 'rgba(41, 50, 65, 0.9)',
-  bgCardLight: 'rgba(80, 97, 118, 0.4)',
-  bgInput: 'rgba(41, 50, 65, 0.95)',
-  bgDeep: 'rgba(41, 50, 65, 0.95)',
-  borderSubtle: 'rgba(169, 188, 208, 0.22)',
-  borderMedium: 'rgba(169, 188, 208, 0.36)',
-  borderStrong: 'rgba(88, 164, 176, 0.5)',
-  textPrimary: '#F4F6FA',
-  textSecondary: '#D8DBE2',
-  textMuted: '#A9BCD0',
-  accentGold: '#58A4B0',
-  accentGoldLight: '#8CC9D0',
-  accentGoldDark: '#3E8390',
-  danger: '#506176',
-  dangerLight: '#A9BCD0',
-  success: '#58A4B0',
-  successLight: '#8CC9D0',
-};
 
 interface ComplaintDetailModalProps {
   complaint: Complaint | null;
@@ -68,47 +35,26 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
   };
 
   const tabButtonStyle = (isActive: boolean) => ({
-    color: isActive ? P.accentGold : P.textMuted,
-    borderBottom: `2px solid ${isActive ? P.accentGold : 'transparent'}`,
+    color: isActive ? '#D21515' : '#6B6B6B',
+    borderBottom: `2px solid ${isActive ? '#D21515' : 'transparent'}`,
     background: 'transparent',
+    fontWeight: isActive ? 700 : 500,
   });
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-      style={{ background: 'rgba(13, 15, 10, 0.82)', backdropFilter: 'blur(4px)' }}
-    >
-      <div
-        className="rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
-        style={{
-          background: 'rgba(20, 22, 14, 0.98)',
-          border: `1px solid ${P.borderStrong}`,
-        }}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+      <div className="rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl bg-white border border-[#C0BCB1] overflow-hidden">
         {/* Modal Header */}
-        <div
-          className="px-6 py-4 flex items-center justify-between"
-          style={{
-            borderBottom: `1px solid ${P.borderSubtle}`,
-            background: 'rgba(22, 25, 16, 0.9)',
-          }}
-        >
+        <div className="px-6 py-4 flex items-center justify-between border-b border-[#E4E2DC] bg-[#F0EFEA]">
           <div className="flex items-center space-x-3">
-            <span
-              className="font-mono text-sm font-bold px-2.5 py-1 rounded"
-              style={{
-                color: P.accentGold,
-                background: 'rgba(215, 190, 130, 0.1)',
-                border: `1px solid rgba(215, 190, 130, 0.25)`,
-              }}
-            >
+            <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)]">
               {complaint.id}
             </span>
             <div>
-              <h2 className="text-base font-bold leading-tight" style={{ color: '#ffffff' }}>
+              <h2 className="text-base font-bold text-[#171717] leading-tight">
                 {complaint.title}
               </h2>
-              <div className="flex items-center space-x-2 text-xs mt-0.5" style={{ color: P.textMuted }}>
+              <div className="flex items-center space-x-2 text-xs mt-0.5 text-[#6B6B6B]">
                 <span>Customer: {complaint.customerName}</span>
                 <span>•</span>
                 <span>Order: {complaint.orderReference}</span>
@@ -121,25 +67,15 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={handleCopyJson}
-              className="p-1.5 rounded-lg text-xs flex items-center space-x-1 cursor-pointer transition"
-              style={{
-                background: P.bgCardLight,
-                color: P.textSecondary,
-                border: `1px solid ${P.borderSubtle}`,
-              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs flex items-center space-x-1 cursor-pointer bg-white text-[#171717] border border-[#C0BCB1] hover:border-[#171717] transition"
               title="Copy JSON Payload"
             >
-              <Copy className="w-3.5 h-3.5" />
+              {copied ? <Check className="w-3.5 h-3.5 text-[#D21515]" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied' : 'JSON'}</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg transition cursor-pointer"
-              style={{
-                background: P.bgCardLight,
-                color: P.textMuted,
-                border: `1px solid ${P.borderSubtle}`,
-              }}
+              className="p-1.5 rounded-lg bg-white text-[#6B6B6B] hover:text-[#171717] border border-[#C0BCB1] transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -147,13 +83,7 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div
-          className="flex items-center space-x-1 px-4 sm:px-6 pt-2 text-xs overflow-x-auto scrollbar-none whitespace-nowrap"
-          style={{
-            borderBottom: `1px solid ${P.borderSubtle}`,
-            background: 'rgba(22, 25, 16, 0.5)',
-          }}
-        >
+        <div className="flex items-center space-x-1 px-4 sm:px-6 pt-2 text-xs overflow-x-auto scrollbar-none whitespace-nowrap border-b border-[#E4E2DC] bg-[#F0EFEA]/50">
           {[
             { id: 'dossier', label: 'Triage Dossier' },
             { id: 'pipeline1', label: 'Pipeline 1 (GenAI)' },
@@ -165,7 +95,7 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className="px-3 sm:px-3.5 py-2 font-medium transition cursor-pointer shrink-0"
+              className="px-3.5 py-2 font-medium transition cursor-pointer shrink-0"
               style={tabButtonStyle(activeTab === tab.id)}
             >
               {tab.label}
@@ -174,46 +104,33 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs bg-white text-[#3A3A3A]">
           {activeTab === 'dossier' && (
             <div className="space-y-5">
               {/* Verification Score Card */}
               <div
-                className="p-4 rounded-xl flex items-center justify-between"
-                style={{
-                  background:
-                    comp?.verificationStatus === 'Verified'
-                      ? 'rgba(90, 122, 58, 0.12)'
-                      : 'rgba(117, 92, 27, 0.15)',
-                  border: `1px solid ${
-                    comp?.verificationStatus === 'Verified'
-                      ? 'rgba(90, 122, 58, 0.35)'
-                      : 'rgba(117, 92, 27, 0.4)'
-                  }`,
-                }}
+                className={`p-4 rounded-xl flex items-center justify-between border ${
+                  comp?.verificationStatus === 'Verified'
+                    ? 'bg-[rgba(23,23,23,0.04)] border-[#C0BCB1]'
+                    : 'bg-[rgba(210,21,21,0.06)] border-[rgba(210,21,21,0.25)]'
+                }`}
               >
                 <div className="flex items-center space-x-3">
                   {comp?.verificationStatus === 'Verified' ? (
-                    <ShieldCheck className="w-8 h-8" style={{ color: P.successLight }} />
+                    <ShieldCheck className="w-7 h-7 text-[#171717]" />
                   ) : (
-                    <AlertTriangle className="w-8 h-8" style={{ color: P.darkOliveGold }} />
+                    <AlertTriangle className="w-7 h-7 text-[#D21515]" />
                   )}
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-bold" style={{ color: '#ffffff' }}>
+                      <span className="text-sm font-bold text-[#171717]">
                         Dual-Pipeline Status: {comp?.verificationStatus}
                       </span>
-                      <span
-                        className="font-mono text-xs px-2 py-0.5 rounded"
-                        style={{
-                          background: P.bgDeep,
-                          color: P.textSecondary,
-                        }}
-                      >
+                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-white border border-[#C0BCB1] font-semibold text-[#171717]">
                         Score: {comp?.verificationScore}%
                       </span>
                     </div>
-                    <p className="text-[11px] mt-0.5" style={{ color: P.textSecondary }}>
+                    <p className="text-[11px] mt-0.5 text-[#6B6B6B]">
                       {comp?.verificationStatus === 'Verified'
                         ? '100% policy-compliant resolution pipeline. Ready for agent dispatch.'
                         : 'Discrepancy detected between AI draft and rule matrix. Routed for human review.'}
@@ -222,387 +139,156 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Adversarial Badge */}
+              {/* Adversarial Alert */}
               {p1?.adversarialAnalysis?.isAdversarial && (
-                <div
-                  className="p-4 rounded-xl text-xs space-y-1.5"
-                  style={{
-                    background: 'rgba(64, 4, 6, 0.4)',
-                    border: `1px solid rgba(154, 44, 44, 0.5)`,
-                  }}
-                >
-                  <div className="flex items-center space-x-2 font-bold" style={{ color: '#e8a0a0' }}>
-                    <AlertTriangle className="w-4 h-4" style={{ color: P.dangerLight }} />
+                <div className="p-4 rounded-xl text-xs space-y-1.5 bg-[rgba(210,21,21,0.06)] border border-[rgba(210,21,21,0.3)] text-[#171717]">
+                  <div className="flex items-center space-x-2 font-bold text-[#D21515]">
+                    <AlertTriangle className="w-4 h-4 text-[#D21515]" />
                     <span>SECURITY ALERT: {p1.adversarialAnalysis.threatType} Intercepted</span>
                   </div>
-                  <p className="text-[11px] leading-relaxed" style={{ color: P.textSecondary }}>
+                  <p className="text-[11px] leading-relaxed text-[#3A3A3A]">
                     {p1.adversarialAnalysis.threatDetails}
                   </p>
-                  <div
-                    className="text-[10px] font-semibold pt-1"
-                    style={{ color: '#e8a0a0', borderTop: `1px solid rgba(154, 44, 44, 0.25)` }}
-                  >
+                  <div className="text-[10px] font-semibold pt-1 text-[#D21515] border-t border-[rgba(210,21,21,0.2)]">
                     Recommended Action: {p1.adversarialAnalysis.recommendedAction}
                   </div>
                 </div>
               )}
 
               {p1?.summary && (
-                <div
-                  className="p-3.5 rounded-xl text-xs"
-                  style={{
-                    background: 'rgba(215, 190, 130, 0.06)',
-                    border: `1px solid rgba(215, 190, 130, 0.25)`,
-                  }}
-                >
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider block mb-1"
-                    style={{ color: P.warmGold }}
-                  >
+                <div className="p-3.5 rounded-xl text-xs bg-[#F0EFEA] border border-[#C0BCB1]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#D21515]">
                     AI Executive Triage Summary
                   </span>
-                  <p className="text-xs leading-relaxed" style={{ color: P.textPrimary }}>
+                  <p className="text-xs leading-relaxed text-[#171717]">
                     {p1.summary}
                   </p>
                 </div>
               )}
 
-              {/* Original Complaint */}
-              <div
-                className="p-4 rounded-xl"
-                style={{
-                  background: 'rgba(22, 24, 15, 0.6)',
-                  border: `1px solid ${P.borderSubtle}`,
-                }}
-              >
+              {/* Customer Submission */}
+              <div className="p-4 rounded-xl bg-[#F0EFEA] border border-[#C0BCB1]">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider block" style={{ color: P.textMuted }}>
+                  <span className="text-[11px] font-bold uppercase tracking-wider block text-[#171717]">
                     Customer Submission
                   </span>
                   {p1?.responseTone && (
-                    <span
-                      className="text-[10px] font-medium px-2 py-0.5 rounded"
-                      style={{
-                        background: 'rgba(122, 68, 25, 0.2)',
-                        color: '#c49a6c',
-                        border: `1px solid rgba(122, 68, 25, 0.4)`,
-                      }}
-                    >
-                      Response Tone: {p1.responseTone}
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white text-[#171717] border border-[#C0BCB1]">
+                      Tone: {p1.responseTone}
                     </span>
                   )}
                 </div>
-                <p className="leading-relaxed font-sans" style={{ color: P.textPrimary }}>
+                <p className="leading-relaxed text-[#3A3A3A] mt-1">
                   {complaint.description}
                 </p>
-                <div
-                  className="mt-3 pt-2 flex flex-wrap gap-4"
-                  style={{ borderTop: `1px solid ${P.borderSubtle}`, color: P.textMuted }}
-                >
-                  <span>Product: <strong style={{ color: P.textPrimary }}>{complaint.productService}</strong></span>
-                  <span>Channel: <strong style={{ color: P.textPrimary }}>{complaint.channel}</strong></span>
-                  <span>Customer Tier: <strong style={{ color: P.textPrimary }}>{complaint.customerType}</strong></span>
-                  <span>Target SLA: <strong style={{ color: P.textPrimary }}>{complaint.slaHours} Hours</strong></span>
-                  {p1?.followUpRequired && (
-                    <span style={{ color: P.darkOliveGold, fontWeight: 600 }}>
-                      Follow-Up Required: {p1.followUpReason || 'Action required'}
-                    </span>
-                  )}
+                <div className="mt-3 pt-2 flex flex-wrap gap-4 border-t border-[#C0BCB1]/60 text-[#6B6B6B]">
+                  <span>Product: <strong className="text-[#171717]">{complaint.productService}</strong></span>
+                  <span>Channel: <strong className="text-[#171717]">{complaint.channel}</strong></span>
+                  <span>Customer Tier: <strong className="text-[#171717]">{complaint.customerType}</strong></span>
+                  <span>Target SLA: <strong className="text-[#171717]">{complaint.slaHours} Hours</strong></span>
                 </div>
               </div>
 
               {/* Side-by-side comparison summary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  className="p-4 rounded-xl space-y-2"
-                  style={{
-                    background: 'rgba(22, 24, 15, 0.6)',
-                    border: `1px solid ${P.borderSubtle}`,
-                  }}
-                >
-                  <span
-                    className="font-bold block pb-1"
-                    style={{ color: P.warmGold, borderBottom: `1px solid ${P.borderSubtle}` }}
-                  >
+                <div className="p-4 rounded-xl space-y-2 bg-[#F0EFEA] border border-[#C0BCB1]">
+                  <span className="font-bold block pb-1 border-b border-[#C0BCB1] text-[#D21515]">
                     Pipeline 1 GenAI Assessment
                   </span>
-                  <div>Primary Issue: <strong style={{ color: '#ffffff' }}>{p1?.primaryIssue}</strong></div>
-                  {p1?.secondaryIssues && (p1.secondaryIssues || []).length > 0 && (
-                    <div className="text-[11px]" style={{ color: P.textSecondary }}>
-                      Secondary Issues: <span style={{ color: P.textPrimary, fontWeight: 500 }}>{(p1.secondaryIssues || []).join(', ')}</span>
-                    </div>
-                  )}
-                  <div>Category: <strong style={{ color: '#ffffff' }}>{p1?.category}</strong> ({p1?.subcategory})</div>
-                  <div>
-                    Routing: <strong style={{ color: P.warmGold }}>{p1?.recommendedDepartment}</strong>
-                    {p1?.secondaryDepartments && (p1.secondaryDepartments || []).length > 0 && (
-                      <span className="text-[10px] ml-1.5" style={{ color: P.textMuted }}>
-                        (Also: {(p1.secondaryDepartments || []).join(', ')})
-                      </span>
-                    )}
-                  </div>
-                  <div>Urgency / Priority: <strong style={{ color: '#ffffff' }}>{p1?.urgency} ({p1?.priority})</strong></div>
-                  <div>Escalation: <strong style={{ color: '#e8a0a0' }}>{p1?.escalationRequired ? `Yes (${p1.escalationTier})` : 'No'}</strong></div>
-                  {p1?.internalAgentGuidance && (
-                    <div
-                      className="p-2 rounded text-[10px] italic"
-                      style={{
-                        background: 'rgba(13, 15, 10, 0.8)',
-                        border: `1px solid ${P.borderSubtle}`,
-                        color: P.textSecondary,
-                      }}
-                    >
-                      Guidance: {p1.internalAgentGuidance}
-                    </div>
-                  )}
+                  <div>Primary Issue: <strong className="text-[#171717]">{p1?.primaryIssue}</strong></div>
+                  <div>Category: <strong className="text-[#171717]">{p1?.category}</strong> ({p1?.subcategory})</div>
+                  <div>Routing: <strong className="text-[#D21515]">{p1?.recommendedDepartment}</strong></div>
+                  <div>Urgency / Priority: <strong className="text-[#171717]">{p1?.urgency} ({p1?.priority})</strong></div>
+                  <div>Escalation: <strong className={p1?.escalationRequired ? 'text-[#D21515]' : 'text-[#171717]'}>{p1?.escalationRequired ? `Yes (${p1.escalationTier})` : 'No'}</strong></div>
                 </div>
 
-                <div
-                  className="p-4 rounded-xl space-y-2"
-                  style={{
-                    background: 'rgba(22, 24, 15, 0.6)',
-                    border: `1px solid ${P.borderSubtle}`,
-                  }}
-                >
-                  <span
-                    className="font-bold block pb-1"
-                    style={{ color: P.successLight, borderBottom: `1px solid ${P.borderSubtle}` }}
-                  >
+                <div className="p-4 rounded-xl space-y-2 bg-[#F0EFEA] border border-[#C0BCB1]">
+                  <span className="font-bold block pb-1 border-b border-[#C0BCB1] text-[#171717]">
                     Pipeline 2 Rule Matrix Assessment
                   </span>
-                  <div>Expected Category: <strong style={{ color: '#ffffff' }}>{p2?.expectedCategory}</strong></div>
-                  <div>Expected Subcategory: <strong style={{ color: P.textSecondary }}>{p2?.expectedSubcategory}</strong></div>
-                  <div>Mandatory Dept: <strong style={{ color: P.successLight }}>{p2?.expectedDepartment}</strong></div>
-                  <div>Expected Urgency / Pri: <strong style={{ color: '#ffffff' }}>{p2?.expectedUrgency} ({p2?.expectedPriority})</strong></div>
-                  <div>Mandatory Escalation: <strong style={{ color: '#e8a0a0' }}>{p2?.mandatoryEscalation ? `MANDATORY (${p2.mandatoryEscalationTier})` : 'No'}</strong></div>
-                  <div className="text-[11px]" style={{ color: P.textMuted }}>
-                    Matched Rules: <span className="font-mono" style={{ color: P.textPrimary }}>{(p2?.matchedRules || []).join(', ') || 'Standard SLA'}</span>
+                  <div>Expected Category: <strong className="text-[#171717]">{p2?.expectedCategory}</strong></div>
+                  <div>Mandatory Dept: <strong className="text-[#171717] font-semibold">{p2?.expectedDepartment}</strong></div>
+                  <div>Expected Urgency / Pri: <strong className="text-[#171717]">{p2?.expectedUrgency} ({p2?.expectedPriority})</strong></div>
+                  <div>Mandatory Escalation: <strong className={p2?.mandatoryEscalation ? 'text-[#D21515]' : 'text-[#171717]'}>{p2?.mandatoryEscalation ? `MANDATORY (${p2.mandatoryEscalationTier})` : 'No'}</strong></div>
+                  <div className="text-[11px] text-[#6B6B6B]">
+                    Rules: <span className="font-mono text-[#171717]">{(p2?.matchedRules || []).join(', ') || 'Standard SLA'}</span>
                   </div>
                 </div>
               </div>
-
-              {/* Discrepancies list */}
-              {comp?.discrepancies && (comp.discrepancies || []).length > 0 && (
-                <div
-                  className="p-4 rounded-xl"
-                  style={{
-                    background: 'rgba(22, 24, 15, 0.6)',
-                    border: `1px solid rgba(117, 92, 27, 0.4)`,
-                  }}
-                >
-                  <span className="font-bold block mb-2" style={{ color: '#b89545' }}>
-                    Discrepancy & Safety Inspection Report ({(comp.discrepancies || []).length})
-                  </span>
-                  <ul className="list-disc pl-4 space-y-1" style={{ color: P.textSecondary }}>
-                    {(comp.discrepancies || []).map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
 
           {activeTab === 'pipeline1' && (
-            <div className="space-y-4">
-              <div
-                className="p-4 rounded-xl font-mono space-y-2 leading-relaxed"
-                style={{
-                  background: P.bgDeep,
-                  border: `1px solid ${P.borderSubtle}`,
-                  color: P.textSecondary,
-                }}
-              >
-                <span className="font-bold block mb-2" style={{ color: P.warmGold }}>
-                  Pipeline 1 Structured JSON Payload
-                </span>
-                <pre className="overflow-x-auto text-[11px]">
-                  {JSON.stringify(p1, null, 2)}
-                </pre>
-              </div>
+            <div className="p-4 rounded-xl font-mono space-y-2 bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717]">
+              <span className="font-bold block mb-2 text-[#D21515]">Pipeline 1 Structured JSON</span>
+              <pre className="overflow-x-auto text-[11px]">{JSON.stringify(p1, null, 2)}</pre>
             </div>
           )}
 
           {activeTab === 'python' && (
             <div className="space-y-4">
-              <div
-                className="p-4 rounded-xl"
-                style={{
-                  border: `1px solid rgba(117, 92, 27, 0.4)`,
-                  background: 'rgba(117, 92, 27, 0.1)',
-                }}
-              >
+              <div className="p-4 rounded-xl bg-[#F0EFEA] border border-[#C0BCB1]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold" style={{ color: '#b89545' }}>
-                    Python 3.10 Ground-Truth Crosscheck Status: {complaint.pythonValidation?.status || 'Validated'}
+                  <span className="text-xs font-bold text-[#171717]">
+                    Python Validation Status: {complaint.pythonValidation?.status || 'Validated'}
                   </span>
-                  <span
-                    className="font-mono text-xs px-2 py-0.5 rounded"
-                    style={{ background: P.bgDeep, color: P.textSecondary }}
-                  >
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-white border border-[#C0BCB1] font-bold">
                     Score: {complaint.pythonValidation?.validationScore ?? 90}%
                   </span>
                 </div>
-                <p className="text-xs" style={{ color: P.textSecondary }}>
-                  Independent Python validation engine executing alongside AI (Pipeline 1) and Rule Matrix (Pipeline 2) to cross-check constraints, hazard words, and policy logic.
+                <p className="text-xs text-[#6B6B6B]">
+                  Ground-truth Python engine crosschecking constraints and policy rules.
                 </p>
               </div>
 
-              {complaint.pythonValidation?.findings && (complaint.pythonValidation.findings || []).length > 0 && (
-                <div
-                  className="p-4 rounded-xl space-y-2"
-                  style={{
-                    background: 'rgba(22, 24, 15, 0.6)',
-                    border: `1px solid rgba(154, 44, 44, 0.4)`,
-                  }}
-                >
-                  <span className="font-bold block mb-1" style={{ color: '#e8a0a0' }}>
-                    Python Findings & Divergences ({(complaint.pythonValidation.findings || []).length})
-                  </span>
-                  <div className="space-y-1.5">
-                    {(complaint.pythonValidation.findings || []).map((f, i) => (
-                      <div
-                        key={i}
-                        className="p-2 rounded text-[11px]"
-                        style={{
-                          background: 'rgba(13, 15, 10, 0.6)',
-                          border: `1px solid ${P.borderSubtle}`,
-                          color: P.textPrimary,
-                        }}
-                      >
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[9px] font-bold mr-2"
-                          style={{
-                            background: 'rgba(154, 44, 44, 0.25)',
-                            color: '#e8a0a0',
-                          }}
-                        >
-                          {f.severity}
-                        </span>
-                        <span>{f.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div
-                className="p-4 rounded-xl font-mono space-y-2 leading-relaxed"
-                style={{
-                  background: P.bgDeep,
-                  border: `1px solid ${P.borderSubtle}`,
-                  color: P.textSecondary,
-                }}
-              >
-                <span className="font-bold block mb-2" style={{ color: P.warmGold }}>
-                  Python Validator Raw Execution Payload
-                </span>
-                <pre className="overflow-x-auto text-[11px]">
-                  {JSON.stringify(complaint.pythonValidation || { message: 'Validated in Python 3.10 standard engine' }, null, 2)}
-                </pre>
+              <div className="p-4 rounded-xl font-mono bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717]">
+                <pre className="overflow-x-auto text-[11px]">{JSON.stringify(complaint.pythonValidation || { message: 'Validated in Python 3.10 engine' }, null, 2)}</pre>
               </div>
             </div>
           )}
 
           {activeTab === 'pipeline2' && (
-            <div className="space-y-4">
-              <div
-                className="p-4 rounded-xl font-mono space-y-2 leading-relaxed"
-                style={{
-                  background: P.bgDeep,
-                  border: `1px solid ${P.borderSubtle}`,
-                  color: P.textSecondary,
-                }}
-              >
-                <span className="font-bold block mb-2" style={{ color: P.successLight }}>
-                  Pipeline 2 Ground-Truth Validation Payload
-                </span>
-                <pre className="overflow-x-auto text-[11px]">
-                  {JSON.stringify(p2, null, 2)}
-                </pre>
-              </div>
+            <div className="p-4 rounded-xl font-mono bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717]">
+              <span className="font-bold block mb-2 text-[#171717]">Pipeline 2 Rule Matrix Payload</span>
+              <pre className="overflow-x-auto text-[11px]">{JSON.stringify(p2, null, 2)}</pre>
             </div>
           )}
 
           {activeTab === 'policies' && (
-            <div className="space-y-4">
-              <span className="font-bold block" style={{ color: '#ffffff' }}>
-                Cited Knowledge Base Policies for this Complaint
-              </span>
-
-              {p1?.citedPolicies && (p1.citedPolicies || []).length > 0 ? (
-                (p1.citedPolicies || []).map((cp, idx) => {
+            <div className="space-y-3">
+              <span className="font-bold block text-sm text-[#171717]">Cited Knowledge Base Policies</span>
+              {p1?.citedPolicies && p1.citedPolicies.length > 0 ? (
+                p1.citedPolicies.map((cp, idx) => {
                   const fullDoc = (policies || []).find((p) => p.id === cp.docId);
                   return (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-xl space-y-2"
-                      style={{
-                        background: P.bgCardLight,
-                        border: `1px solid ${P.borderSubtle}`,
-                      }}
-                    >
+                    <div key={idx} className="p-4 rounded-xl space-y-1.5 bg-[#F0EFEA] border border-[#C0BCB1]">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold" style={{ color: P.warmGold }}>
-                          {cp.docId} - Section: {cp.sectionId}
-                        </span>
-                        <span className="text-[10px]" style={{ color: P.textMuted }}>
-                          {fullDoc ? `v${fullDoc.version} (${fullDoc.status})` : 'Active'}
-                        </span>
+                        <span className="font-mono text-xs font-bold text-[#D21515]">{cp.docId} • {cp.sectionId}</span>
+                        <span className="text-[10px] text-[#6B6B6B]">{fullDoc ? `v${fullDoc.version}` : 'Active'}</span>
                       </div>
-                      <h4 className="font-semibold" style={{ color: '#ffffff' }}>
-                        {fullDoc?.title || cp.citationText}
-                      </h4>
-                      <p
-                        className="italic p-2.5 rounded"
-                        style={{
-                          color: P.textSecondary,
-                          background: 'rgba(13, 15, 10, 0.6)',
-                          border: `1px solid ${P.borderSubtle}`,
-                        }}
-                      >
-                        "{cp.citationText}"
-                      </p>
-                      <div className="text-[11px]" style={{ color: P.textMuted }}>
-                        Relevance: <span style={{ color: P.textPrimary }}>{cp.relevance}</span>
-                      </div>
+                      <h4 className="font-bold text-[#171717]">{fullDoc?.title || cp.citationText}</h4>
+                      <p className="italic p-2.5 rounded bg-white border border-[#C0BCB1] text-[#3A3A3A]">"{cp.citationText}"</p>
                     </div>
                   );
                 })
               ) : (
-                <div className="italic" style={{ color: P.textMuted }}>No explicit policy citations recorded.</div>
+                <div className="text-xs text-[#6B6B6B] italic">No explicit policy citations recorded.</div>
               )}
             </div>
           )}
 
           {activeTab === 'audit' && (
             <div className="space-y-3">
-              <span className="font-bold block mb-2" style={{ color: '#ffffff' }}>
-                Immutable Lifecycle Audit Log
-              </span>
-              <div
-                className="relative pl-4 ml-2 space-y-4"
-                style={{ borderLeft: `2px solid ${P.borderSubtle}` }}
-              >
+              <span className="font-bold block text-sm text-[#171717]">Immutable Audit Log</span>
+              <div className="relative pl-4 ml-2 space-y-4 border-l-2 border-[#C0BCB1]">
                 {(complaint.auditTrail || []).map((log) => (
                   <div key={log.id} className="relative">
-                    <div
-                      className="absolute top-1 w-2.5 h-2.5 rounded-full"
-                      style={{
-                        left: '-21px',
-                        background: P.accentGold,
-                        boxShadow: `0 0 0 4px ${P.bgDark}`,
-                      }}
-                    />
-                    <div className="text-[10px] font-mono" style={{ color: P.textMuted }}>
-                      {new Date(log.timestamp).toLocaleString()} • Actor: <strong style={{ color: P.textSecondary }}>{log.actor}</strong>
+                    <div className="absolute top-1 w-2.5 h-2.5 rounded-full -left-[21px] bg-[#D21515]" />
+                    <div className="text-[10px] font-mono text-[#6B6B6B]">
+                      {new Date(log.timestamp).toLocaleString()} • Actor: <strong className="text-[#171717]">{log.actor}</strong>
                     </div>
-                    <div className="text-xs font-semibold mt-0.5" style={{ color: '#ffffff' }}>
-                      {log.action}
-                    </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: P.textMuted }}>
-                      {log.details}
-                    </div>
+                    <div className="text-xs font-bold text-[#171717] mt-0.5">{log.action}</div>
+                    <div className="text-[11px] text-[#6B6B6B] mt-0.5">{log.details}</div>
                   </div>
                 ))}
               </div>

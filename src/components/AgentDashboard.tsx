@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   CheckCircle,
   FileText,
-  User,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -50,7 +49,6 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
 
   const selected = (complaints ?? []).find((c) => c.id === selectedId);
 
-  // Synchronize draft response when switching tickets
   React.useEffect(() => {
     if (selected) {
       setResponseDraft(selected.pipeline1Output?.draftedResponse || '');
@@ -63,6 +61,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
     if (statusFilter !== 'All' && c.status !== statusFilter) return false;
     return true;
   });
+
   const pageSize = 6;
   const currentPage = Math.min(listPage, Math.max(1, Math.ceil(filtered.length / pageSize)));
   const visibleRequests = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -71,10 +70,10 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   const agentUrgentCount = filtered.filter((item) => item.slaRiskStatus !== 'Safe').length;
   const agentVerifiedCount = filtered.filter((item) => item.comparisonResult?.verificationStatus === 'Verified').length;
   const agentStatusCounts = [
-    { label: 'Assigned', count: filtered.filter((item) => item.status === 'Assigned').length, color: 'gold' },
-    { label: 'In progress', count: filtered.filter((item) => item.status === 'In Progress').length, color: 'sienna' },
-    { label: 'Escalated', count: filtered.filter((item) => item.status === 'Escalated').length, color: 'mahogany' },
-    { label: 'Resolved', count: agentResolvedCount, color: 'olive' },
+    { label: 'Assigned', count: filtered.filter((item) => item.status === 'Assigned').length, color: 'resolved' },
+    { label: 'In Progress', count: filtered.filter((item) => item.status === 'In Progress').length, color: 'active' },
+    { label: 'Escalated', count: filtered.filter((item) => item.status === 'Escalated').length, color: 'active' },
+    { label: 'Resolved', count: agentResolvedCount, color: 'verified' },
   ];
   const agentStatusMax = Math.max(...agentStatusCounts.map((item) => item.count), 1);
 
@@ -99,436 +98,418 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   };
 
   return (
-  <div className="agent-dashboard role-dashboard space-y-6">
-    {/* Header */}
-    <div className="rounded-2xl p-5 shadow-lg">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 text-[10px] font-semibold rounded uppercase tracking-widest bg-[#D7BE82]/15 text-[#D7BE82] border border-[#D7BE82]/30 font-mono">
-              Support team workspace
-            </span>
-            <span className="text-xs text-[#bcb8a9]">
-              Suggested replies are checked against support rules
-            </span>
-          </div>
-          <h1 className="text-xl font-bold text-white mt-2 tracking-tight">
-            Requests assigned to you
-          </h1>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <span className="text-[10px] text-[#8f8a78] font-mono uppercase tracking-widest">Dept:</span>
-          <select
-            value={currentDepartment}
-            onChange={(e) => {
-              onDepartmentChange(e.target.value);
-              setListPage(1);
-            }}
-            className="rounded-lg px-3 py-1.5 text-xs"
-          >
-            <option value="All">All Departments</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Filter pills */}
-      <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-[#D7BE82]/15 overflow-x-auto text-xs relative z-10">
-        <span className="text-[#8f8a78] font-medium mr-1 font-mono uppercase tracking-widest text-[10px]">Status:</span>
-        {['All', 'Assigned', 'In Progress', 'Escalated', 'Resolved'].map((st) => (
-          <button
-            key={st}
-            onClick={() => {
-              setStatusFilter(st);
-              setListPage(1);
-            }}
-            className={`px-3 py-1 rounded-lg transition cursor-pointer font-mono text-[11px] tracking-wider ${
-              statusFilter === st
-                ? 'bg-[#D7BE82] text-[#21170b] font-semibold'
-                : 'bg-[#0d0f0a]/60 text-[#8f8a78] border border-[#D7BE82]/18 hover:text-[#D7BE82]'
-            }`}
-          >
-            {st}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* KPIs */}
-    <section className="role-analytics" aria-label="Agent workload overview">
-      <div className="role-kpi-grid">
-        {[
-          { label: 'Open requests', value: agentOpenCount, note: 'Still need attention', tone: 'gold' },
-          { label: 'Resolved', value: agentResolvedCount, note: 'Completed requests', tone: 'olive' },
-          { label: 'Urgent', value: agentUrgentCount, note: 'Close to / past deadline', tone: 'mahogany' },
-          { label: 'Checked', value: agentVerifiedCount, note: 'Passed support checks', tone: 'sienna' },
-        ].map((item) => (
-          <div className={`role-kpi role-kpi-${item.tone}`} key={item.label}>
-            <span>{item.label}</span><strong>{item.value}</strong><small>{item.note}</small>
-          </div>
-        ))}
-      </div>
-
-      <div className="role-chart-card">
-        <div className="role-chart-title">
+    <div className="agent-dashboard role-dashboard space-y-6">
+      {/* Hero Banner */}
+      <div className="rounded-2xl p-6 md:p-7 bg-white border border-[#C0BCB1] shadow-[0_6px_0_rgba(23,23,23,0.05),0_20px_45px_rgba(23,23,23,0.06)] relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C0BCB1] via-[#D21515] to-[#C0BCB1]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <strong>Your workload</strong>
-            <small>Requests by current status</small>
-          </div>
-          <Inbox className="w-4 h-4 text-[#D7BE82]" />
-        </div>
-        <div className="role-bar-chart mt-4">
-          {agentStatusCounts.map((item) => (
-            <div className="role-bar-row" key={item.label}>
-              <span>{item.label}</span>
-              <div><i className={`role-bar-${item.color}`} style={{ width: `${agentOpenCount + agentResolvedCount ? Math.max(item.count / agentStatusMax * 100, item.count ? 8 : 0) : 0}%` }} /></div>
-              <b>{item.count}</b>
+            <div className="flex items-center space-x-2">
+              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)] font-mono">
+                Agent Workspace
+              </span>
+              <span className="text-xs text-[#6B6B6B]">
+                Dual-Pipeline Verified Triage
+              </span>
             </div>
+            <h1 className="text-2xl font-bold text-[#171717] mt-1.5 tracking-tight">
+              Assigned Tickets & Actions
+            </h1>
+            <p className="text-xs text-[#6B6B6B] mt-1">
+              Review AI-drafted responses against cited policies before replying to customers.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-[#6B6B6B] font-medium">Department:</span>
+            <select
+              value={currentDepartment}
+              onChange={(e) => {
+                onDepartmentChange(e.target.value);
+                setListPage(1);
+              }}
+              className="rounded-xl px-3 py-1.5 text-xs bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717] focus:outline-none focus:border-[#D21515]"
+            >
+              <option value="All">All Departments</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Filter pills */}
+        <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-[#E4E2DC] overflow-x-auto text-xs">
+          <span className="text-[#6B6B6B] font-semibold text-[11px]">Filter:</span>
+          {['All', 'Assigned', 'In Progress', 'Escalated', 'Resolved'].map((st) => (
+            <button
+              key={st}
+              onClick={() => {
+                setStatusFilter(st);
+                setListPage(1);
+              }}
+              className={`px-3 py-1 rounded-lg transition font-medium text-xs cursor-pointer ${
+                statusFilter === st
+                  ? 'bg-[#171717] text-white shadow-sm'
+                  : 'bg-[#F0EFEA] text-[#3A3A3A] border border-[#C0BCB1] hover:border-[#171717]'
+              }`}
+            >
+              {st}
+            </button>
           ))}
         </div>
       </div>
-    </section>
 
-    {/* Grid */}
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Worklist */}
-      <div className="lg:col-span-5 space-y-3">
-        <div className="flex items-center justify-between text-[11px] text-[#8f8a78] px-1 font-mono uppercase tracking-widest">
-          <span>Worklist ({filtered.length})</span>
-          <span>Urgent first</span>
+      {/* KPI Cards */}
+      <section className="role-analytics" aria-label="Agent Workload Overview">
+        <div className="role-kpi-grid">
+          <div className="role-kpi role-kpi-gold">
+            <span>Open Tickets</span>
+            <strong>{agentOpenCount}</strong>
+            <small>Active in queue</small>
+          </div>
+          <div className="role-kpi role-kpi-olive">
+            <span>Resolved</span>
+            <strong>{agentResolvedCount}</strong>
+            <small>Successfully closed</small>
+          </div>
+          <div className="role-kpi role-kpi-mahogany">
+            <span>Urgent SLA</span>
+            <strong>{agentUrgentCount}</strong>
+            <small>At risk or breached</small>
+          </div>
+          <div className="role-kpi role-kpi-sienna">
+            <span>Verified Status</span>
+            <strong>{agentVerifiedCount}</strong>
+            <small>100% policy match</small>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Worklist Sidebar */}
+        <div className="lg:col-span-5 space-y-3">
+          <div className="flex items-center justify-between text-xs text-[#6B6B6B] px-1 font-semibold">
+            <span>Tickets ({filtered.length})</span>
+            <span>Priority Queue</span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-8 text-center text-[#6B6B6B] text-xs">
+              No tickets matching current filters.
+            </div>
+          ) : (
+            visibleRequests.map((item) => {
+              const isSelected = item.id === selectedId;
+              const isVerified = item.comparisonResult?.verificationStatus === 'Verified';
+              const p1 = item.pipeline1Output;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                  className={`p-4 rounded-xl border transition cursor-pointer relative bg-white ${
+                    isSelected
+                      ? 'border-[#171717] shadow-md ring-2 ring-[#171717]'
+                      : 'border-[#C0BCB1] hover:border-[#171717]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-mono text-xs font-bold text-[#D21515]">
+                      {item.id}
+                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      {isVerified ? (
+                        <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded bg-[rgba(23,23,23,0.06)] text-[#171717] border border-[#C0BCB1]">
+                          <ShieldCheck className="w-3 h-3 text-[#171717]" />
+                          <span>Verified</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)]">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Review</span>
+                        </span>
+                      )}
+
+                      <span
+                        className={`px-1.5 py-0.5 text-[10px] font-semibold rounded font-mono ${
+                          item.slaRiskStatus === 'Breached'
+                            ? 'bg-[rgba(210,21,21,0.12)] text-[#D21515] border border-[#D21515]'
+                            : item.slaRiskStatus === 'Approaching'
+                            ? 'bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1]'
+                            : 'bg-[#F0EFEA] text-[#3A3A3A] border border-[#C0BCB1]'
+                        }`}
+                      >
+                        {item.slaRiskStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-xs font-semibold text-[#171717] line-clamp-1 mb-1">
+                    {item.title}
+                  </h3>
+
+                  <div className="flex items-center justify-between text-[11px] text-[#6B6B6B] mt-2">
+                    <span className="flex items-center space-x-1 truncate max-w-[170px]">
+                      <Tag className="w-3 h-3 text-[#6B6B6B]" />
+                      <span>{p1?.category || item.assignedDepartment}</span>
+                    </span>
+                    <span className="font-mono font-medium text-[#171717]">
+                      {p1?.priority || 'P3'} ({p1?.urgency || 'Med'})
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          <Pagination page={currentPage} pageSize={pageSize} totalItems={filtered.length} onPageChange={setListPage} />
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="role-chart-card p-8 text-center text-[#8f8a78] text-xs">
-            No tickets matching current filters.
-          </div>
-        ) : (
-          visibleRequests.map((item) => {
-            const isSelected = item.id === selectedId;
-            const isVerified = item.comparisonResult?.verificationStatus === 'Verified';
-            const p1 = item.pipeline1Output;
+        {/* Workspace Detail */}
+        <div className="lg:col-span-7">
+          {selected ? (
+            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-6 shadow-sm space-y-5">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E2DC]">
+                <div>
+                  <div className="flex items-center space-x-2 text-xs">
+                    <span className="font-mono font-bold text-[#D21515]">{selected.id}</span>
+                    <span className="text-[#C0BCB1]">•</span>
+                    <span className="text-[#6B6B6B]">
+                      {selected.customerName} ({selected.customerType})
+                    </span>
+                  </div>
+                  <h2 className="text-base font-bold text-[#171717] mt-1 tracking-tight">
+                    {selected.title}
+                  </h2>
+                </div>
 
-            return (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => onSelectComplaint(selected)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1] hover:border-[#171717] transition cursor-pointer flex items-center space-x-1"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>View Dossier</span>
+                  </button>
+                  <button
+                    onClick={handleResolve}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171717] text-white hover:bg-[#D21515] transition cursor-pointer flex items-center space-x-1 shadow-sm"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Mark Resolved</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Customer Submission */}
+              <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl p-4">
+                <span className="text-[11px] font-bold text-[#171717] uppercase tracking-wider block mb-1">
+                  Customer's Message
+                </span>
+                <p className="text-xs text-[#3A3A3A] leading-relaxed">
+                  {selected.description}
+                </p>
+                <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t border-[#C0BCB1]/60 text-[11px] text-[#6B6B6B]">
+                  <span>Product: <strong className="text-[#171717]">{selected.productService}</strong></span>
+                  <span>Order: <strong className="text-[#171717]">{selected.orderReference}</strong></span>
+                  <span>Sentiment: <strong className="text-[#D21515]">{selected.pipeline1Output?.sentiment || 'Neutral'}</strong></span>
+                </div>
+              </div>
+
+              {/* Verification Callout */}
               <div
-                key={item.id}
-                onClick={() => setSelectedId(item.id)}
-                className={`dashboard-request-card p-4 rounded-xl border transition cursor-pointer relative ${
-                  isSelected
-                    ? 'bg-[#1a1c11] border-[#D7BE82] shadow-lg ring-1 ring-[#D7BE82]/40'
-                    : 'bg-[#14160e]/60 border-[#D7BE82]/18 hover:bg-[#1a1c11]/80'
+                className={`p-4 rounded-xl border ${
+                  selected.comparisonResult?.verificationStatus === 'Verified'
+                    ? 'bg-[rgba(23,23,23,0.03)] border-[#C0BCB1]'
+                    : 'bg-[rgba(210,21,21,0.05)] border-[rgba(210,21,21,0.25)]'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono text-xs font-semibold text-[#D7BE82]">
-                    {item.id}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-[#D21515]" />
+                    <span className="text-xs font-bold text-[#171717]">
+                      Dual-Pipeline Compliance Check
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#D21515]">
+                    Match Score: {selected.comparisonResult?.verificationScore}%
                   </span>
-                  <div className="flex items-center space-x-1.5">
-                    {isVerified ? (
-                      <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded font-mono bg-[#515A47]/50 text-[#a7bc8d] border border-[#748365]/60">
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>Verified</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded font-mono bg-[#755C1B]/40 text-[#e4c77f] border border-[#755C1B]/60">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Review</span>
-                      </span>
-                    )}
+                </div>
 
-                    <span
-                      className={`px-1.5 py-0.5 text-[10px] font-semibold rounded font-mono ${
-                        item.slaRiskStatus === 'Breached'
-                          ? 'bg-[#400406]/60 text-[#e0a1a0] border border-[#8e3736]/60'
-                          : item.slaRiskStatus === 'Approaching'
-                          ? 'bg-[#755C1B]/40 text-[#e4c77f] border border-[#755C1B]/60'
-                          : 'bg-[#515A47]/50 text-[#a7bc8d] border border-[#748365]/60'
-                      }`}
-                    >
-                      {item.slaRiskStatus}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mt-2">
+                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
+                    <span className="text-[10px] text-[#6B6B6B] block">Matched Rule</span>
+                    <span className="font-semibold text-[#171717] text-[11px] truncate block">
+                      {(selected.pipeline2Output?.matchedRules || []).join(', ') || 'Standard SLA'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
+                    <span className="text-[10px] text-[#6B6B6B] block">Python Engine</span>
+                    <span className="font-semibold text-[#171717] text-[11px] block">
+                      {selected.pythonValidation?.status || 'Active'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
+                    <span className="text-[10px] text-[#6B6B6B] block">Policy Eligibility</span>
+                    <span className={`font-semibold text-[11px] block ${selected.pipeline2Output?.policyEligibilityApproved ? 'text-[#171717]' : 'text-[#D21515]'}`}>
+                      {selected.pipeline2Output?.policyEligibilityApproved ? 'Approved' : 'Restricted'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
+                    <span className="text-[10px] text-[#6B6B6B] block">Target SLA</span>
+                    <span className="font-semibold text-[#171717] text-[11px] block">
+                      {selected.slaHours} Hours
                     </span>
                   </div>
                 </div>
 
-                <h3 className="text-xs font-medium text-[#f5edda] line-clamp-1 mb-1">
-                  {item.title}
-                </h3>
-
-                <div className="flex items-center justify-between text-[11px] text-[#8f8a78] mt-2">
-                  <span className="flex items-center space-x-1 truncate max-w-[150px]">
-                    <Tag className="w-3 h-3" />
-                    <span>{p1?.category || item.assignedDepartment}</span>
-                  </span>
-                  <span className="font-mono text-[10px]">
-                    {p1?.priority || 'P3'} ({p1?.urgency || 'Med'})
-                  </span>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <Pagination page={currentPage} pageSize={pageSize} totalItems={filtered.length} onPageChange={setListPage} />
-      </div>
-
-      {/* Workspace */}
-      <div className="lg:col-span-7">
-        {selected ? (
-          <div className="role-chart-card space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#D7BE82]/20">
-              <div>
-                <div className="flex items-center space-x-2 font-mono text-[11px]">
-                  <span className="font-bold text-[#D7BE82]">{selected.id}</span>
-                  <span className="text-[#8f8a78]">•</span>
-                  <span className="text-[#bcb8a9]">
-                    From: {selected.customerName} ({selected.customerType})
-                  </span>
-                </div>
-                <h2 className="text-base font-bold text-white mt-1 tracking-tight">
-                  {selected.title}
-                </h2>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => onSelectComplaint(selected)}
-                  className="p-1.5 rounded-lg text-xs flex items-center space-x-1 cursor-pointer bg-[#515A47]/40 text-[#bcb8a9] border border-[#D7BE82]/25 hover:bg-[#515A47]/60"
-                  title="View all request details"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Details</span>
-                </button>
-                <button
-                  onClick={handleResolve}
-                  className="px-3 py-1.5 rounded-lg font-medium transition text-xs flex items-center space-x-1 cursor-pointer bg-[#515A47]/60 text-[#a7bc8d] border border-[#748365]/60 hover:bg-[#515A47]/80"
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Mark resolved</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Customer message */}
-            <div className="bg-[#0d0f0a]/70 border border-[#D7BE82]/18 rounded-xl p-4">
-              <span className="text-[10px] font-mono font-semibold text-[#D7BE82] uppercase tracking-widest block mb-1.5">
-                Customer's message
-              </span>
-              <p className="text-xs text-[#f5edda] leading-relaxed">
-                {selected.description}
-              </p>
-              <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t border-[#D7BE82]/15 text-[11px] text-[#8f8a78] font-mono">
-                <span>Product: <strong className="text-[#f5edda]">{selected.productService}</strong></span>
-                <span>Order: <strong className="text-[#f5edda]">{selected.orderReference}</strong></span>
-                <span>Sentiment: <strong className="text-[#D7BE82]">{selected.pipeline1Output?.sentiment || 'Neutral'}</strong></span>
-              </div>
-            </div>
-
-            {/* Verification callout */}
-            <div
-              className={`p-4 rounded-xl border ${
-                selected.comparisonResult?.verificationStatus === 'Verified'
-                  ? 'bg-[#515A47]/25 border-[#748365]/50'
-                  : 'bg-[#755C1B]/20 border-[#755C1B]/50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-[#a7bc8d]" />
-                  <span className="text-xs font-bold text-[#f5edda] uppercase tracking-widest font-mono">
-                    Support rules check
-                  </span>
-                </div>
-                <span className="text-xs font-mono font-semibold text-[#a7bc8d]">
-                  Match: {selected.comparisonResult?.verificationScore}%
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-[#bcb8a9] mt-2">
-                <div className="bg-[#0d0f0a]/70 p-2 rounded border border-[#D7BE82]/15">
-                  <span className="text-[10px] text-[#8f8a78] block font-mono uppercase">Rules</span>
-                  <span className="font-mono text-[#D7BE82] text-[11px]">
-                    {(selected.pipeline2Output?.matchedRules || []).join(', ') || 'Standard'}
-                  </span>
-                </div>
-                <div className="bg-[#0d0f0a]/70 p-2 rounded border border-[#D7BE82]/15">
-                  <span className="text-[10px] text-[#8f8a78] block font-mono uppercase">Status</span>
-                  <span className={`font-mono text-[11px] font-semibold ${selected.pythonValidation?.passed ? 'text-[#a7bc8d]' : 'text-[#e4c77f]'}`}>
-                    {selected.pythonValidation?.status || 'Active'}
-                  </span>
-                </div>
-                <div className="bg-[#0d0f0a]/70 p-2 rounded border border-[#D7BE82]/15">
-                  <span className="text-[10px] text-[#8f8a78] block font-mono uppercase">Eligibility</span>
-                  <span className={selected.pipeline2Output?.policyEligibilityApproved ? 'text-[#a7bc8d] font-semibold' : 'text-[#e0a1a0] font-semibold'}>
-                    {selected.pipeline2Output?.policyEligibilityApproved ? 'Eligible' : 'Restricted'}
-                  </span>
-                </div>
-                <div className="bg-[#0d0f0a]/70 p-2 rounded border border-[#D7BE82]/15">
-                  <span className="text-[10px] text-[#8f8a78] block font-mono uppercase">SLA</span>
-                  <span className="text-[#f5edda]">
-                    {selected.pipeline2Output?.expectedUrgency} ({selected.slaHours}h)
-                  </span>
-                </div>
-              </div>
-
-              {selected.comparisonResult && (selected.comparisonResult.discrepancies || []).length > 0 && (
-                <div className="mt-3 p-2.5 bg-[#755C1B]/25 border border-[#755C1B]/50 rounded-lg text-xs text-[#e4c77f] space-y-1">
-                  <span className="font-semibold flex items-center">
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-                    Differences that need a review:
-                  </span>
-                  <ul className="list-disc pl-4 text-[11px] space-y-0.5">
-                    {(selected.comparisonResult.discrepancies || []).map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Internal guidance */}
-            {selected.pipeline1Output?.internalAgentGuidance && (
-              <div className="bg-[#0d0f0a]/70 border border-[#D7BE82]/18 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setShowInternalGuidance(!showInternalGuidance)}
-                  className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-[#bcb8a9] hover:bg-[#D7BE82]/5 cursor-pointer"
-                >
-                  <span className="flex items-center space-x-1.5 font-mono uppercase tracking-widest text-[10px]">
-                    <HelpCircle className="w-4 h-4 text-[#D7BE82]" />
-                    <span>Suggested next steps</span>
-                  </span>
-                  {showInternalGuidance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showInternalGuidance && (
-                  <div className="p-4 text-xs text-[#bcb8a9] space-y-2 border-t border-[#D7BE82]/15">
-                    <p className="italic text-[#e4c77f] bg-[#755C1B]/15 p-2.5 rounded border border-[#755C1B]/30">
-                      {selected.pipeline1Output.internalAgentGuidance}
-                    </p>
-                    {(selected.pipeline1Output.resolutionSteps || []).length > 0 && (
-                      <div>
-                        <span className="text-[10px] font-mono font-semibold text-[#8f8a78] uppercase tracking-widest block mb-1">
-                          Suggested actions:
-                        </span>
-                        <ul className="space-y-1 pl-4 list-decimal text-[#bcb8a9] text-xs">
-                          {(selected.pipeline1Output.resolutionSteps || []).map((step, idx) => (
-                            <li key={idx}>{step}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {selected.comparisonResult && (selected.comparisonResult.discrepancies || []).length > 0 && (
+                  <div className="mt-3 p-3 bg-white border border-[#C0BCB1] rounded-lg text-xs space-y-1">
+                    <span className="font-bold text-[#D21515] flex items-center">
+                      <AlertTriangle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      Discrepancies identified:
+                    </span>
+                    <ul className="list-disc pl-4 text-[11px] text-[#3A3A3A] space-y-0.5">
+                      {(selected.comparisonResult.discrepancies || []).map((d, i) => (
+                        <li key={i}>{d}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Reply editor */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-mono font-semibold text-[#D7BE82] uppercase tracking-widest flex items-center space-x-1.5">
-                  <FileText className="w-4 h-4" />
-                  <span>Reply to the customer</span>
-                </label>
-                <span className="text-[10px] text-[#8f8a78] font-mono">
-                  Review and edit before sending
-                </span>
-              </div>
-              <textarea
-                value={responseDraft}
-                onChange={(e) => setResponseDraft(e.target.value)}
-                rows={6}
-                className="w-full rounded-xl p-3 text-xs leading-relaxed"
-              />
-
-              <div className="flex items-center justify-between mt-3">
-                <button
-                  onClick={() => setIsEscalating(!isEscalating)}
-                  className="px-3 py-1.5 rounded-lg border border-[#8e3736]/60 text-[#e0a1a0] hover:bg-[#400406]/30 text-xs font-medium flex items-center space-x-1.5 transition cursor-pointer"
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Escalate Ticket</span>
-                </button>
-
-                <button
-                  onClick={handleSendResponse}
-                  disabled={selected.comparisonResult?.verificationStatus === 'Manual Review'}
-                  className="px-4 py-2 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold rounded-lg shadow-md flex items-center space-x-1.5 transition cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(180deg, #e8b85e 0%, #d59837 100%)',
-                    color: '#21170b',
-                  }}
-                  title={selected.comparisonResult?.verificationStatus === 'Manual Review' ? 'Requires human reviewer clearance first' : 'Send response to customer'}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>
-                    {selected.comparisonResult?.verificationStatus === 'Manual Review'
-                      ? 'Requires Reviewer Clearance'
-                      : 'Send reply'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Inline escalation */}
-              {isEscalating && (
-                <div className="mt-4 p-4 bg-[#0d0f0a]/80 border border-[#8e3736]/50 rounded-xl space-y-3">
-                  <h4 className="text-[11px] font-mono font-bold text-[#e0a1a0] uppercase tracking-widest">
-                    Send this request to a supervisor
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] text-[#8f8a78] mb-1 font-mono uppercase">Send to</label>
-                      <select
-                        value={escalationTier}
-                        onChange={(e: any) => setEscalationTier(e.target.value)}
-                        className="w-full rounded-lg p-2 text-xs"
-                      >
-                        <option value="Supervisor Review">Supervisor Review</option>
-                        <option value="Department Manager">Department Manager</option>
-                        <option value="Specialist Team">Specialist Team</option>
-                        <option value="Compliance Review">Compliance Review</option>
-                        <option value="Critical Management Escalation">Critical Management Escalation</option>
-                      </select>
+              {/* Guidance Toggle */}
+              {selected.pipeline1Output?.internalAgentGuidance && (
+                <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setShowInternalGuidance(!showInternalGuidance)}
+                    className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-[#171717] cursor-pointer"
+                  >
+                    <span className="flex items-center space-x-1.5">
+                      <HelpCircle className="w-4 h-4 text-[#D21515]" />
+                      <span>Agent Guidance & Recommended Steps</span>
+                    </span>
+                    {showInternalGuidance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {showInternalGuidance && (
+                    <div className="p-4 text-xs text-[#3A3A3A] space-y-2 border-t border-[#C0BCB1]">
+                      <p className="bg-white p-2.5 rounded-lg border border-[#C0BCB1] italic text-[#171717]">
+                        {selected.pipeline1Output.internalAgentGuidance}
+                      </p>
+                      {(selected.pipeline1Output.resolutionSteps || []).length > 0 && (
+                        <div className="mt-2">
+                          <span className="font-bold text-[#171717] block mb-1">
+                            Action steps:
+                          </span>
+                          <ul className="space-y-1 pl-4 list-decimal text-[#3A3A3A] text-xs">
+                            {(selected.pipeline1Output.resolutionSteps || []).map((step, idx) => (
+                              <li key={idx}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-[10px] text-[#8f8a78] mb-1 font-mono uppercase">Why?</label>
-                      <input
-                        type="text"
-                        value={escalationReason}
-                        onChange={(e) => setEscalationReason(e.target.value)}
-                        placeholder="Safety concern / needs supervisor"
-                        className="w-full rounded-lg p-2 text-xs"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => setIsEscalating(false)}
-                      className="px-3 py-1.5 rounded-lg text-xs text-[#8f8a78] hover:text-[#bcb8a9] cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleExecuteEscalation}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
-                      style={{
-                        background: 'linear-gradient(180deg, #8e3736 0%, #400406 100%)',
-                        color: '#f5edda',
-                      }}
-                    >
-                      Send to supervisor
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
+
+              {/* Reply Box */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-[#171717] flex items-center space-x-1.5">
+                    <FileText className="w-4 h-4 text-[#D21515]" />
+                    <span>Customer Response Draft</span>
+                  </label>
+                  <span className="text-[10px] text-[#6B6B6B]">Editable before sending</span>
+                </div>
+                <textarea
+                  value={responseDraft}
+                  onChange={(e) => setResponseDraft(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-xl p-3 text-xs leading-relaxed bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717] focus:bg-white focus:border-[#D21515] focus:outline-none"
+                />
+
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    onClick={() => setIsEscalating(!isEscalating)}
+                    className="px-3 py-2 rounded-xl border border-[rgba(210,21,21,0.3)] text-[#D21515] bg-[rgba(210,21,21,0.06)] hover:bg-[#D21515] hover:text-white text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>Escalate Ticket</span>
+                  </button>
+
+                  <button
+                    onClick={handleSendResponse}
+                    disabled={selected.comparisonResult?.verificationStatus === 'Manual Review'}
+                    className="px-5 py-2.5 text-xs font-semibold rounded-xl bg-[#171717] text-white hover:bg-[#D21515] disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>
+                      {selected.comparisonResult?.verificationStatus === 'Manual Review'
+                        ? 'Requires Reviewer Clearance'
+                        : 'Send Response to Customer'}
+                    </span>
+                  </button>
+                </div>
+
+                {isEscalating && (
+                  <div className="mt-4 p-4 bg-[#F0EFEA] border border-[rgba(210,21,21,0.3)] rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-[#D21515]">
+                      Escalate to Higher Authority
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-[#3A3A3A] mb-1">Target Tier</label>
+                        <select
+                          value={escalationTier}
+                          onChange={(e: any) => setEscalationTier(e.target.value)}
+                          className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                        >
+                          <option value="Supervisor Review">Supervisor Review</option>
+                          <option value="Department Manager">Department Manager</option>
+                          <option value="Specialist Team">Specialist Team</option>
+                          <option value="Compliance Review">Compliance Review</option>
+                          <option value="Critical Management Escalation">Critical Management Escalation</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-[#3A3A3A] mb-1">Reason</label>
+                        <input
+                          type="text"
+                          value={escalationReason}
+                          onChange={(e) => setEscalationReason(e.target.value)}
+                          placeholder="e.g. Safety hazard or SLA risk"
+                          className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end space-x-2 pt-1">
+                      <button
+                        onClick={() => setIsEscalating(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs text-[#6B6B6B] hover:text-[#171717] cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleExecuteEscalation}
+                        className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-[#D21515] text-white hover:bg-[#A01010] cursor-pointer shadow-sm"
+                      >
+                        Confirm Escalation
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="role-chart-card p-12 text-center text-[#8f8a78] text-xs">
-            Choose a request from the list to view it and reply.
-          </div>
-        )}
+          ) : (
+            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-12 text-center text-[#6B6B6B] text-xs">
+              Select a ticket to review and draft responses.
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
