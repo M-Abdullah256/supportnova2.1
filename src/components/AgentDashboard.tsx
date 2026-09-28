@@ -15,6 +15,10 @@ import {
   ChevronUp,
   Tag,
   HelpCircle,
+  User,
+  Package,
+  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 
 interface AgentDashboardProps {
@@ -65,17 +69,11 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   const pageSize = 6;
   const currentPage = Math.min(listPage, Math.max(1, Math.ceil(filtered.length / pageSize)));
   const visibleRequests = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const agentOpenCount = filtered.filter((item) => item.status !== 'Resolved' && item.status !== 'Closed').length;
   const agentResolvedCount = filtered.filter((item) => item.status === 'Resolved' || item.status === 'Closed').length;
   const agentUrgentCount = filtered.filter((item) => item.slaRiskStatus !== 'Safe').length;
   const agentVerifiedCount = filtered.filter((item) => item.comparisonResult?.verificationStatus === 'Verified').length;
-  const agentStatusCounts = [
-    { label: 'Assigned', count: filtered.filter((item) => item.status === 'Assigned').length, color: 'resolved' },
-    { label: 'In Progress', count: filtered.filter((item) => item.status === 'In Progress').length, color: 'active' },
-    { label: 'Escalated', count: filtered.filter((item) => item.status === 'Escalated').length, color: 'active' },
-    { label: 'Resolved', count: agentResolvedCount, color: 'verified' },
-  ];
-  const agentStatusMax = Math.max(...agentStatusCounts.map((item) => item.count), 1);
 
   const handleSendResponse = async () => {
     if (!selected || !responseDraft.trim()) return;
@@ -95,421 +93,456 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
       'Escalated'
     );
     setIsEscalating(false);
+    setEscalationReason('');
   };
 
+  const statusFilters = ['All', 'Assigned', 'In Progress', 'Escalated', 'Resolved'];
+
   return (
-    <div className="agent-dashboard role-dashboard space-y-6">
-      {/* Hero Banner */}
-      <div className="rounded-2xl p-6 md:p-7 bg-white border border-[#C0BCB1] shadow-[0_6px_0_rgba(23,23,23,0.05),0_20px_45px_rgba(23,23,23,0.06)] relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C0BCB1] via-[#D21515] to-[#C0BCB1]" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)] font-mono">
-                Agent Workspace
-              </span>
-              <span className="text-xs text-[#6B6B6B]">
-                Dual-Pipeline Verified Triage
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#171717] mt-1.5 tracking-tight">
-              Assigned Tickets & Actions
-            </h1>
-            <p className="text-xs text-[#6B6B6B] mt-1">
-              Review AI-drafted responses against cited policies before replying to customers.
-            </p>
-          </div>
+    <div className="agent-dashboard role-dashboard agent-page">
 
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-[#6B6B6B] font-medium">Department:</span>
-            <select
-              value={currentDepartment}
-              onChange={(e) => {
-                onDepartmentChange(e.target.value);
-                setListPage(1);
-              }}
-              className="rounded-xl px-3 py-1.5 text-xs bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717] focus:outline-none focus:border-[#D21515]"
-            >
-              <option value="All">All Departments</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+      {/* ============================================================
+          HERO
+      ============================================================ */}
+      <section className="agent-hero">
+  <div className="agent-hero-glow" aria-hidden />
 
-        {/* Filter pills */}
-        <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-[#E4E2DC] overflow-x-auto text-xs">
-          <span className="text-[#6B6B6B] font-semibold text-[11px]">Filter:</span>
-          {['All', 'Assigned', 'In Progress', 'Escalated', 'Resolved'].map((st) => (
-            <button
-              key={st}
-              onClick={() => {
-                setStatusFilter(st);
-                setListPage(1);
-              }}
-              className={`px-3 py-1 rounded-lg transition font-medium text-xs cursor-pointer ${
-                statusFilter === st
-                  ? 'bg-[#171717] text-white shadow-sm'
-                  : 'bg-[#F0EFEA] text-[#3A3A3A] border border-[#C0BCB1] hover:border-[#171717]'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
+  <div className="agent-hero-inner">
+
+    {/* LEFT — same stack as customer hero */}
+    <div className="agent-hero-left">
+      <div className="agent-hero-eyebrow">
+        <span className="agent-pill">Agent Workspace</span>
+        <span className="agent-pill-sub">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          Dual-Pipeline Verified Triage
+        </span>
       </div>
 
-      {/* KPI Cards */}
-      <section className="role-analytics" aria-label="Agent Workload Overview">
-        <div className="role-kpi-grid">
-          <div className="role-kpi role-kpi-gold">
-            <span>Open Tickets</span>
-            <strong>{agentOpenCount}</strong>
-            <small>Active in queue</small>
+      <h1 className="agent-hero-title">Assigned Tickets &amp; Actions</h1>
+      <p className="agent-hero-sub">
+        Review AI-drafted responses against cited policies before replying to customers.
+      </p>
+    </div>
+
+    {/* RIGHT — same segmented-control language as customer hero */}
+    <nav className="agent-hero-nav" aria-label="Agent filters">
+
+      {/* Row 1 — Department select */}
+      <div className="agent-hero-dept">
+        <span className="agent-hero-dept-label">Department</span>
+        <select
+          value={currentDepartment}
+          onChange={(e) => {
+            onDepartmentChange(e.target.value);
+            setListPage(1);
+          }}
+          className="agent-hero-dept-select"
+        >
+          <option value="All">All Departments</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Row 2 — Status segmented control */}
+      <div className="agent-hero-tabs" role="tablist">
+        {['All', 'Assigned', 'In Progress', 'Escalated', 'Resolved'].map((st) => (
+          <button
+            key={st}
+            type="button"
+            role="tab"
+            aria-selected={statusFilter === st}
+            onClick={() => { setStatusFilter(st); setListPage(1); }}
+            className={`agent-hero-tab ${statusFilter === st ? 'is-active' : ''}`}
+          >
+            {st}
+          </button>
+        ))}
+      </div>
+
+    </nav>
+  </div>
+</section>
+
+      {/* ============================================================
+          KPI ROW
+      ============================================================ */}
+      <section className="agent-kpi-grid">
+        <div className="agent-kpi">
+          <div className="agent-kpi-icon"><Inbox className="w-5 h-5" /></div>
+          <div className="agent-kpi-body">
+            <span className="agent-kpi-label">Open Tickets</span>
+            <strong className="agent-kpi-value">{agentOpenCount}</strong>
+            <small className="agent-kpi-sub">Active in queue</small>
           </div>
-          <div className="role-kpi role-kpi-olive">
-            <span>Resolved</span>
-            <strong>{agentResolvedCount}</strong>
-            <small>Successfully closed</small>
+        </div>
+
+        <div className="agent-kpi">
+          <div className="agent-kpi-icon"><CheckCircle className="w-5 h-5" /></div>
+          <div className="agent-kpi-body">
+            <span className="agent-kpi-label">Resolved</span>
+            <strong className="agent-kpi-value">{agentResolvedCount}</strong>
+            <small className="agent-kpi-sub">Successfully closed</small>
           </div>
-          <div className="role-kpi role-kpi-mahogany">
-            <span>Urgent SLA</span>
-            <strong>{agentUrgentCount}</strong>
-            <small>At risk or breached</small>
+        </div>
+
+        <div className="agent-kpi">
+          <div className="agent-kpi-icon"><Clock className="w-5 h-5" /></div>
+          <div className="agent-kpi-body">
+            <span className="agent-kpi-label">Urgent SLA</span>
+            <strong className="agent-kpi-value">{agentUrgentCount}</strong>
+            <small className="agent-kpi-sub">At risk or breached</small>
           </div>
-          <div className="role-kpi role-kpi-sienna">
-            <span>Verified Status</span>
-            <strong>{agentVerifiedCount}</strong>
-            <small>100% policy match</small>
+        </div>
+
+        <div className="agent-kpi">
+          <div className="agent-kpi-icon"><ShieldCheck className="w-5 h-5" /></div>
+          <div className="agent-kpi-body">
+            <span className="agent-kpi-label">Verified Status</span>
+            <strong className="agent-kpi-value">{agentVerifiedCount}</strong>
+            <small className="agent-kpi-sub">100% policy match</small>
           </div>
         </div>
       </section>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Worklist Sidebar */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between text-xs text-[#6B6B6B] px-1 font-semibold">
-            <span>Tickets ({filtered.length})</span>
-            <span>Priority Queue</span>
-          </div>
+      {/* ============================================================
+          MAIN WORKSPACE
+      ============================================================ */}
+      <section className="agent-workspace">
 
-          {filtered.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-8 text-center text-[#6B6B6B] text-xs">
-              No tickets matching current filters.
+        {/* ---------- Left: Worklist ---------- */}
+        <aside className="agent-worklist">
+          <header className="agent-worklist-head">
+            <div>
+              <span className="agent-section-label">Ticket Queue</span>
+              <h2 className="agent-worklist-title">
+                {filtered.length} {filtered.length === 1 ? 'ticket' : 'tickets'}
+              </h2>
             </div>
-          ) : (
-            visibleRequests.map((item) => {
-              const isSelected = item.id === selectedId;
-              const isVerified = item.comparisonResult?.verificationStatus === 'Verified';
-              const p1 = item.pipeline1Output;
+            <span className="agent-worklist-badge">Priority order</span>
+          </header>
 
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedId(item.id)}
-                  className={`p-4 rounded-xl border transition cursor-pointer relative bg-white ${
-                    isSelected
-                      ? 'border-[#171717] shadow-md ring-2 ring-[#171717]'
-                      : 'border-[#C0BCB1] hover:border-[#171717]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-xs font-bold text-[#D21515]">
-                      {item.id}
-                    </span>
-                    <div className="flex items-center space-x-1.5">
-                      {isVerified ? (
-                        <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded bg-[rgba(23,23,23,0.06)] text-[#171717] border border-[#C0BCB1]">
-                          <ShieldCheck className="w-3 h-3 text-[#171717]" />
-                          <span>Verified</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center space-x-1 px-2 py-0.5 text-[10px] font-semibold rounded bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)]">
-                          <AlertTriangle className="w-3 h-3" />
-                          <span>Review</span>
-                        </span>
-                      )}
+          <div className="agent-worklist-body">
+            {filtered.length === 0 ? (
+              <div className="agent-empty">
+                <Inbox className="w-7 h-7" />
+                <p className="agent-empty-title">No tickets found</p>
+                <p className="agent-empty-sub">Adjust the department or status filter.</p>
+              </div>
+            ) : (
+              visibleRequests.map((item) => {
+                const isSelected = item.id === selectedId;
+                const isVerified = item.comparisonResult?.verificationStatus === 'Verified';
+                const p1 = item.pipeline1Output;
 
-                      <span
-                        className={`px-1.5 py-0.5 text-[10px] font-semibold rounded font-mono ${
-                          item.slaRiskStatus === 'Breached'
-                            ? 'bg-[rgba(210,21,21,0.12)] text-[#D21515] border border-[#D21515]'
-                            : item.slaRiskStatus === 'Approaching'
-                            ? 'bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1]'
-                            : 'bg-[#F0EFEA] text-[#3A3A3A] border border-[#C0BCB1]'
-                        }`}
-                      >
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedId(item.id)}
+                    className={`agent-ticket ${isSelected ? 'is-selected' : ''}`}
+                  >
+                    <div className="agent-ticket-top">
+                      <span className="agent-ticket-id">{item.id}</span>
+                      <span className={`agent-ticket-status ${isVerified ? 'is-verified' : 'is-review'}`}>
+                        {isVerified ? 'Verified' : 'Review'}
+                      </span>
+                    </div>
+
+                    <h3 className="agent-ticket-title">{item.title}</h3>
+
+                    <div className="agent-ticket-meta">
+                      <span className="agent-ticket-cat">
+                        <Tag className="w-3 h-3" />
+                        {p1?.category || item.assignedDepartment}
+                      </span>
+                      <span className={`agent-ticket-sla sla-${item.slaRiskStatus?.toLowerCase() || 'safe'}`}>
                         {item.slaRiskStatus}
                       </span>
                     </div>
-                  </div>
 
-                  <h3 className="text-xs font-semibold text-[#171717] line-clamp-1 mb-1">
-                    {item.title}
-                  </h3>
+                    <div className="agent-ticket-footer">
+                      <span className="agent-ticket-cust">
+                        <User className="w-3 h-3" />
+                        {item.customerName}
+                      </span>
+                      <span className="agent-ticket-priority">
+                        {p1?.priority || 'P3'} · {p1?.urgency || 'Med'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-[#6B6B6B] mt-2">
-                    <span className="flex items-center space-x-1 truncate max-w-[170px]">
-                      <Tag className="w-3 h-3 text-[#6B6B6B]" />
-                      <span>{p1?.category || item.assignedDepartment}</span>
-                    </span>
-                    <span className="font-mono font-medium text-[#171717]">
-                      {p1?.priority || 'P3'} ({p1?.urgency || 'Med'})
-                    </span>
+          <div className="agent-worklist-foot">
+            <Pagination
+              page={currentPage}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setListPage}
+            />
+          </div>
+        </aside>
+
+        {/* ---------- Right: Workspace ---------- */}
+        <main className="agent-detail">
+          {!selected ? (
+            <div className="agent-detail-empty">
+              <Sparkles className="w-8 h-8" />
+              <p>Select a ticket from the queue to start working.</p>
+            </div>
+          ) : (
+            <>
+              {/* Ticket header */}
+              <header className="agent-detail-head">
+                <div className="agent-detail-head-left">
+                  <div className="agent-detail-meta">
+                    <span className="agent-detail-id">{selected.id}</span>
+                    <span className="agent-detail-sep">•</span>
+                    <span>{selected.customerName} ({selected.customerType})</span>
+                    <span className="agent-detail-sep">•</span>
+                    <span>{new Date(selected.submittedAt).toLocaleDateString()}</span>
                   </div>
+                  <h2 className="agent-detail-title">{selected.title}</h2>
                 </div>
-              );
-            })
-          )}
-          <Pagination page={currentPage} pageSize={pageSize} totalItems={filtered.length} onPageChange={setListPage} />
-        </div>
 
-        {/* Workspace Detail */}
-        <div className="lg:col-span-7">
-          {selected ? (
-            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-6 shadow-sm space-y-5">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E2DC]">
-                <div>
-                  <div className="flex items-center space-x-2 text-xs">
-                    <span className="font-mono font-bold text-[#D21515]">{selected.id}</span>
-                    <span className="text-[#C0BCB1]">•</span>
-                    <span className="text-[#6B6B6B]">
-                      {selected.customerName} ({selected.customerType})
-                    </span>
-                  </div>
-                  <h2 className="text-base font-bold text-[#171717] mt-1 tracking-tight">
-                    {selected.title}
-                  </h2>
-                </div>
-
-                <div className="flex items-center space-x-2">
+                <div className="agent-detail-actions">
                   <button
+                    type="button"
                     onClick={() => onSelectComplaint(selected)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1] hover:border-[#171717] transition cursor-pointer flex items-center space-x-1"
+                    className="agent-btn agent-btn-ghost"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>View Dossier</span>
                   </button>
                   <button
+                    type="button"
                     onClick={handleResolve}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171717] text-white hover:bg-[#D21515] transition cursor-pointer flex items-center space-x-1 shadow-sm"
+                    className="agent-btn agent-btn-primary"
                   >
                     <CheckCircle className="w-3.5 h-3.5" />
                     <span>Mark Resolved</span>
                   </button>
                 </div>
-              </div>
+              </header>
 
-              {/* Customer Submission */}
-              <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl p-4">
-                <span className="text-[11px] font-bold text-[#171717] uppercase tracking-wider block mb-1">
-                  Customer's Message
-                </span>
-                <p className="text-xs text-[#3A3A3A] leading-relaxed">
-                  {selected.description}
-                </p>
-                <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t border-[#C0BCB1]/60 text-[11px] text-[#6B6B6B]">
-                  <span>Product: <strong className="text-[#171717]">{selected.productService}</strong></span>
-                  <span>Order: <strong className="text-[#171717]">{selected.orderReference}</strong></span>
-                  <span>Sentiment: <strong className="text-[#D21515]">{selected.pipeline1Output?.sentiment || 'Neutral'}</strong></span>
-                </div>
-              </div>
-
-              {/* Verification Callout */}
-              <div
-                className={`p-4 rounded-xl border ${
-                  selected.comparisonResult?.verificationStatus === 'Verified'
-                    ? 'bg-[rgba(23,23,23,0.03)] border-[#C0BCB1]'
-                    : 'bg-[rgba(210,21,21,0.05)] border-[rgba(210,21,21,0.25)]'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <ShieldCheck className="w-4 h-4 text-[#D21515]" />
-                    <span className="text-xs font-bold text-[#171717]">
-                      Dual-Pipeline Compliance Check
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-[#D21515]">
-                    Match Score: {selected.comparisonResult?.verificationScore}%
+              {/* Customer message */}
+              <section className="agent-panel">
+                <div className="agent-panel-head">
+                  <span className="agent-panel-title">
+                    <MessageSquare className="w-4 h-4" />
+                    Customer&rsquo;s Message
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mt-2">
-                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
-                    <span className="text-[10px] text-[#6B6B6B] block">Matched Rule</span>
-                    <span className="font-semibold text-[#171717] text-[11px] truncate block">
-                      {(selected.pipeline2Output?.matchedRules || []).join(', ') || 'Standard SLA'}
+                <div className="agent-panel-body">
+                  <p className="agent-message">{selected.description}</p>
+                  <div className="agent-message-meta">
+                    <span>
+                      <Package className="w-3.5 h-3.5" />
+                      <strong>{selected.productService}</strong>
                     </span>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
-                    <span className="text-[10px] text-[#6B6B6B] block">Python Engine</span>
-                    <span className="font-semibold text-[#171717] text-[11px] block">
-                      {selected.pythonValidation?.status || 'Active'}
+                    <span>
+                      <FileText className="w-3.5 h-3.5" />
+                      Order <strong>{selected.orderReference}</strong>
                     </span>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
-                    <span className="text-[10px] text-[#6B6B6B] block">Policy Eligibility</span>
-                    <span className={`font-semibold text-[11px] block ${selected.pipeline2Output?.policyEligibilityApproved ? 'text-[#171717]' : 'text-[#D21515]'}`}>
-                      {selected.pipeline2Output?.policyEligibilityApproved ? 'Approved' : 'Restricted'}
-                    </span>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-lg border border-[#C0BCB1]">
-                    <span className="text-[10px] text-[#6B6B6B] block">Target SLA</span>
-                    <span className="font-semibold text-[#171717] text-[11px] block">
-                      {selected.slaHours} Hours
+                    <span>
+                      Sentiment <strong className="text-accent">{selected.pipeline1Output?.sentiment || 'Neutral'}</strong>
                     </span>
                   </div>
                 </div>
+              </section>
 
-                {selected.comparisonResult && (selected.comparisonResult.discrepancies || []).length > 0 && (
-                  <div className="mt-3 p-3 bg-white border border-[#C0BCB1] rounded-lg text-xs space-y-1">
-                    <span className="font-bold text-[#D21515] flex items-center">
-                      <AlertTriangle className="w-3.5 h-3.5 mr-1 shrink-0" />
-                      Discrepancies identified:
-                    </span>
-                    <ul className="list-disc pl-4 text-[11px] text-[#3A3A3A] space-y-0.5">
-                      {(selected.comparisonResult.discrepancies || []).map((d, i) => (
-                        <li key={i}>{d}</li>
-                      ))}
-                    </ul>
+              {/* Compliance check */}
+              <section className="agent-panel">
+                <div className="agent-panel-head agent-panel-head-split">
+                  <span className="agent-panel-title">
+                    <ShieldCheck className="w-4 h-4" />
+                    Dual-Pipeline Compliance Check
+                  </span>
+                  <span className="agent-score">
+                    Match Score <strong>{selected.comparisonResult?.verificationScore}%</strong>
+                  </span>
+                </div>
+                <div className="agent-panel-body">
+                  <div className="agent-metric-grid">
+                    <div className="agent-metric">
+                      <span className="agent-metric-label">Matched Rule</span>
+                      <span className="agent-metric-value">
+                        {(selected.pipeline2Output?.matchedRules || []).join(', ') || 'Standard SLA'}
+                      </span>
+                    </div>
+                    <div className="agent-metric">
+                      <span className="agent-metric-label">Python Engine</span>
+                      <span className="agent-metric-value">
+                        {selected.pythonValidation?.status || 'Active'}
+                      </span>
+                    </div>
+                    <div className="agent-metric">
+                      <span className="agent-metric-label">Policy Eligibility</span>
+                      <span className={`agent-metric-value ${selected.pipeline2Output?.policyEligibilityApproved ? '' : 'text-accent'}`}>
+                        {selected.pipeline2Output?.policyEligibilityApproved ? 'Approved' : 'Restricted'}
+                      </span>
+                    </div>
+                    <div className="agent-metric">
+                      <span className="agent-metric-label">Target SLA</span>
+                      <span className="agent-metric-value">{selected.slaHours} Hours</span>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Guidance Toggle */}
+                  {selected.comparisonResult && (selected.comparisonResult.discrepancies || []).length > 0 && (
+                    <div className="agent-discrepancies">
+                      <span className="agent-discrepancies-head">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Discrepancies identified
+                      </span>
+                      <ul>
+                        {(selected.comparisonResult.discrepancies || []).map((d, i) => (
+                          <li key={i}>{d}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Agent guidance (collapsible) */}
               {selected.pipeline1Output?.internalAgentGuidance && (
-                <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl overflow-hidden">
+                <section className="agent-panel">
                   <button
+                    type="button"
                     onClick={() => setShowInternalGuidance(!showInternalGuidance)}
-                    className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-[#171717] cursor-pointer"
+                    className="agent-panel-head agent-panel-head-button"
                   >
-                    <span className="flex items-center space-x-1.5">
-                      <HelpCircle className="w-4 h-4 text-[#D21515]" />
-                      <span>Agent Guidance & Recommended Steps</span>
+                    <span className="agent-panel-title">
+                      <HelpCircle className="w-4 h-4" />
+                      Agent Guidance &amp; Recommended Steps
                     </span>
                     {showInternalGuidance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
+
                   {showInternalGuidance && (
-                    <div className="p-4 text-xs text-[#3A3A3A] space-y-2 border-t border-[#C0BCB1]">
-                      <p className="bg-white p-2.5 rounded-lg border border-[#C0BCB1] italic text-[#171717]">
+                    <div className="agent-panel-body">
+                      <p className="agent-guidance-quote">
                         {selected.pipeline1Output.internalAgentGuidance}
                       </p>
                       {(selected.pipeline1Output.resolutionSteps || []).length > 0 && (
-                        <div className="mt-2">
-                          <span className="font-bold text-[#171717] block mb-1">
-                            Action steps:
-                          </span>
-                          <ul className="space-y-1 pl-4 list-decimal text-[#3A3A3A] text-xs">
+                        <div className="agent-steps">
+                          <span className="agent-steps-label">Action steps</span>
+                          <ol>
                             {(selected.pipeline1Output.resolutionSteps || []).map((step, idx) => (
                               <li key={idx}>{step}</li>
                             ))}
-                          </ul>
+                          </ol>
                         </div>
                       )}
                     </div>
                   )}
-                </div>
+                </section>
               )}
 
-              {/* Reply Box */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-[#171717] flex items-center space-x-1.5">
-                    <FileText className="w-4 h-4 text-[#D21515]" />
-                    <span>Customer Response Draft</span>
-                  </label>
-                  <span className="text-[10px] text-[#6B6B6B]">Editable before sending</span>
+              {/* Reply composer */}
+              <section className="agent-panel agent-composer">
+                <div className="agent-panel-head agent-panel-head-split">
+                  <span className="agent-panel-title">
+                    <FileText className="w-4 h-4" />
+                    Customer Response Draft
+                  </span>
+                  <span className="agent-composer-hint">Editable before sending</span>
                 </div>
-                <textarea
-                  value={responseDraft}
-                  onChange={(e) => setResponseDraft(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-xl p-3 text-xs leading-relaxed bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717] focus:bg-white focus:border-[#D21515] focus:outline-none"
-                />
+                <div className="agent-panel-body">
+                  <textarea
+                    value={responseDraft}
+                    onChange={(e) => setResponseDraft(e.target.value)}
+                    rows={7}
+                    placeholder="Compose your response to the customer…"
+                    className="agent-composer-textarea"
+                  />
 
-                <div className="flex items-center justify-between mt-3">
-                  <button
-                    onClick={() => setIsEscalating(!isEscalating)}
-                    className="px-3 py-2 rounded-xl border border-[rgba(210,21,21,0.3)] text-[#D21515] bg-[rgba(210,21,21,0.06)] hover:bg-[#D21515] hover:text-white text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer"
-                  >
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                    <span>Escalate Ticket</span>
-                  </button>
+                  <div className="agent-composer-actions">
+                    <button
+                      type="button"
+                      onClick={() => setIsEscalating(!isEscalating)}
+                      className="agent-btn agent-btn-danger"
+                    >
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                      <span>Escalate Ticket</span>
+                    </button>
 
-                  <button
-                    onClick={handleSendResponse}
-                    disabled={selected.comparisonResult?.verificationStatus === 'Manual Review'}
-                    className="px-5 py-2.5 text-xs font-semibold rounded-xl bg-[#171717] text-white hover:bg-[#D21515] disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 transition cursor-pointer shadow-sm"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>
-                      {selected.comparisonResult?.verificationStatus === 'Manual Review'
-                        ? 'Requires Reviewer Clearance'
-                        : 'Send Response to Customer'}
-                    </span>
-                  </button>
-                </div>
-
-                {isEscalating && (
-                  <div className="mt-4 p-4 bg-[#F0EFEA] border border-[rgba(210,21,21,0.3)] rounded-xl space-y-3">
-                    <h4 className="text-xs font-bold text-[#D21515]">
-                      Escalate to Higher Authority
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-[#3A3A3A] mb-1">Target Tier</label>
-                        <select
-                          value={escalationTier}
-                          onChange={(e: any) => setEscalationTier(e.target.value)}
-                          className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
-                        >
-                          <option value="Supervisor Review">Supervisor Review</option>
-                          <option value="Department Manager">Department Manager</option>
-                          <option value="Specialist Team">Specialist Team</option>
-                          <option value="Compliance Review">Compliance Review</option>
-                          <option value="Critical Management Escalation">Critical Management Escalation</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#3A3A3A] mb-1">Reason</label>
-                        <input
-                          type="text"
-                          value={escalationReason}
-                          onChange={(e) => setEscalationReason(e.target.value)}
-                          placeholder="e.g. Safety hazard or SLA risk"
-                          className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-1">
-                      <button
-                        onClick={() => setIsEscalating(false)}
-                        className="px-3 py-1.5 rounded-xl text-xs text-[#6B6B6B] hover:text-[#171717] cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleExecuteEscalation}
-                        className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-[#D21515] text-white hover:bg-[#A01010] cursor-pointer shadow-sm"
-                      >
-                        Confirm Escalation
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendResponse}
+                      disabled={selected.comparisonResult?.verificationStatus === 'Manual Review'}
+                      className="agent-btn agent-btn-primary agent-btn-lg"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>
+                        {selected.comparisonResult?.verificationStatus === 'Manual Review'
+                          ? 'Requires Reviewer Clearance'
+                          : 'Send Response to Customer'}
+                      </span>
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-12 text-center text-[#6B6B6B] text-xs">
-              Select a ticket to review and draft responses.
-            </div>
+
+                  {isEscalating && (
+                    <div className="agent-escalation">
+                      <h4 className="agent-escalation-title">
+                        <ArrowUpRight className="w-4 h-4" />
+                        Escalate to Higher Authority
+                      </h4>
+                      <div className="agent-escalation-grid">
+                        <div>
+                          <label className="agent-escalation-label">Target Tier</label>
+                          <select
+                            value={escalationTier}
+                            onChange={(e: any) => setEscalationTier(e.target.value)}
+                            className="agent-escalation-select"
+                          >
+                            <option value="Supervisor Review">Supervisor Review</option>
+                            <option value="Department Manager">Department Manager</option>
+                            <option value="Specialist Team">Specialist Team</option>
+                            <option value="Compliance Review">Compliance Review</option>
+                            <option value="Critical Management Escalation">Critical Management Escalation</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="agent-escalation-label">Reason</label>
+                          <input
+                            type="text"
+                            value={escalationReason}
+                            onChange={(e) => setEscalationReason(e.target.value)}
+                            placeholder="e.g. Safety hazard or SLA risk"
+                            className="agent-escalation-input"
+                          />
+                        </div>
+                      </div>
+                      <div className="agent-escalation-actions">
+                        <button
+                          type="button"
+                          onClick={() => setIsEscalating(false)}
+                          className="agent-btn agent-btn-ghost"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleExecuteEscalation}
+                          className="agent-btn agent-btn-primary"
+                        >
+                          Confirm Escalation
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
           )}
-        </div>
-      </div>
+        </main>
+      </section>
     </div>
   );
 };

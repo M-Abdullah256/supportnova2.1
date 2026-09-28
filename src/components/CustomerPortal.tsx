@@ -392,44 +392,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           ))}
         </div>
 
-        <div className="customer-chart-grid">
-          <div className="customer-chart-card">
-            <div className="customer-chart-heading">
-              <div><p>Your requests</p><span>Requests sent in the last six months</span></div>
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <svg className="customer-line-chart" viewBox="0 0 100 60" role="img" aria-label="Ticket activity trend">
-              <line x1="0" y1="52" x2="100" y2="52" />
-              <line x1="0" y1="31" x2="100" y2="31" />
-              <line x1="0" y1="10" x2="100" y2="10" />
-              <polyline points={trendPoints} />
-              {ticketTrend.map((point, index) => (
-                <circle key={point.label} cx={index * 20} cy={52 - (point.count / maxTrendValue) * 42} r="1.7" />
-              ))}
-            </svg>
-            <div className="customer-chart-labels">{ticketTrend.map((point) => <span key={point.label}>{point.label}</span>)}</div>
-          </div>
-
-          <div className="customer-chart-card customer-status-chart">
-            <div className="customer-chart-heading">
-              <div><p>Request progress</p><span>Where your requests stand</span></div>
-              <Target className="w-4 h-4" />
-            </div>
-            <div className="customer-status-bars">
-              {[
-                { label: 'Resolved', count: resolvedTickets, color: 'resolved' },
-                { label: 'Active', count: activeTickets, color: 'active' },
-                { label: 'Verified', count: verifiedTickets, color: 'verified' },
-              ].map((item) => (
-                <div className="customer-status-row" key={item.label}>
-                  <span>{item.label}</span>
-                  <div><i className={`customer-bar-${item.color}`} style={{ width: `${totalTickets ? Math.max((item.count / totalTickets) * 100, item.count ? 8 : 0) : 0}%` }} /></div>
-                  <strong>{item.count}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+     
       </section>
 
       {/* TAB 1: SUBMIT COMPLAINT */}

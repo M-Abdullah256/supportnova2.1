@@ -31,6 +31,7 @@ import {
   Search,
   Sparkles,
   Layers,
+  ArrowRight,
 } from 'lucide-react';
 
 interface AdminPortalProps {
@@ -316,103 +317,106 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   return (
-    <div className="admin-dashboard role-dashboard space-y-6">
+<div className="admin-dashboard role-dashboard admin-page space-y-6">
       {/* Hero Header */}
-      <div className="rounded-2xl p-6 md:p-7 bg-white border border-[#C0BCB1] shadow-[0_6px_0_rgba(23,23,23,0.05),0_20px_45px_rgba(23,23,23,0.06)] relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C0BCB1] via-[#D21515] to-[#C0BCB1]" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)] font-mono">
-                System Administration
-              </span>
-              <span className="text-xs text-[#6B6B6B]">
-                Knowledge Base, Routing Matrix & Access Control
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#171717] mt-1.5 tracking-tight">
-              Platform Administration
-            </h1>
-            <p className="text-xs text-[#6B6B6B] mt-1">
-              Configure knowledge base policies, routing rule matrix, GenAI prompt directives, and user accounts.
-            </p>
-          </div>
+      <section className="admin-hero">
+  <div className="admin-hero-glow" aria-hidden />
 
-          <div className="flex items-center space-x-1 p-1.5 rounded-xl border border-[#C0BCB1] bg-[#F0EFEA] text-xs overflow-x-auto whitespace-nowrap">
-            {[
-              { id: 'policies', icon: BookOpen, label: `Policies (${policies.length})` },
-              { id: 'ruleMatrix', icon: Grid, label: `Rules (${ruleMatrix.length})` },
-              { id: 'prompts', icon: FileCode, label: 'Prompts' },
-              { id: 'security', icon: ShieldAlert, label: 'Security' },
-              { id: 'users', icon: Users, label: `Users (${users.length})` },
-            ].map(({ id, icon: Icon, label }) => {
-              const isActive = activeTab === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id as any)}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
-                    isActive ? 'bg-[#171717] text-white shadow-sm' : 'text-[#6B6B6B] hover:text-[#171717]'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+  <div className="admin-hero-inner">
+
+    {/* LEFT — badge + title + subtitle */}
+    <div className="admin-hero-left">
+      <div className="admin-hero-eyebrow">
+        <span className="admin-pill">System Administration</span>
+        <span className="admin-pill-sub">
+          <Layers className="w-3.5 h-3.5" />
+          Knowledge Base · Routing · Access Control
+        </span>
       </div>
 
-      {/* Analytics KPI Row */}
-      <section className="role-analytics" aria-label="Administration overview">
-        <div className="role-kpi-grid">
-          <div className="role-kpi role-kpi-gold">
-            <span>Active Policies</span>
-            <strong>{activePolicyCount}</strong>
-            <small>{policies.length} total indexed in knowledge base</small>
-          </div>
-          <div className="role-kpi role-kpi-olive">
-            <span>Support Rules</span>
-            <strong>{ruleMatrix.length}</strong>
-            <small>Deterministic routing matrix</small>
-          </div>
-          <div className="role-kpi role-kpi-sienna">
-            <span>AI Templates</span>
-            <strong>{promptTemplates.length}</strong>
-            <small>Active prompt directives</small>
-          </div>
-          <div className="role-kpi role-kpi-mahogany">
-            <span>Team Accounts</span>
-            <strong>{users.length}</strong>
-            <small>Across 5 enterprise roles</small>
-          </div>
-        </div>
+      <h1 className="admin-hero-title">Platform Administration</h1>
+      <p className="admin-hero-sub">
+        Configure knowledge base policies, routing rule matrix, GenAI prompt directives, and user accounts.
+      </p>
+    </div>
 
-        <div className="role-chart-card">
-          <div className="role-chart-title">
-            <div>
-              <strong>Team Accounts Distribution</strong>
-              <small>Registered users by role</small>
-            </div>
-            <Users className="w-4 h-4 text-[#D21515]" />
-          </div>
-          <div className="role-bar-chart mt-4">
-            {adminRoleCounts.map((item) => (
-              <div className="role-bar-row" key={item.label}>
-                <span>{item.label}</span>
-                <div>
-                  <i
-                    className="role-bar-gold"
-                    style={{ width: `${users.length ? Math.max((item.count / maxAdminRoleCount) * 100, item.count ? 8 : 0) : 0}%` }}
-                  />
-                </div>
-                <b>{item.count}</b>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    {/* RIGHT — segmented tab control */}
+    <nav className="admin-hero-nav" aria-label="Administration sections">
+      {[
+        { id: 'policies', icon: BookOpen, label: `Policies (${policies.length})` },
+        { id: 'ruleMatrix', icon: Grid, label: `Rules (${ruleMatrix.length})` },
+        { id: 'prompts', icon: FileCode, label: 'Prompts' },
+        { id: 'security', icon: ShieldAlert, label: 'Security' },
+        { id: 'users', icon: Users, label: `Users (${users.length})` },
+      ].map(({ id, icon: Icon, label }) => {
+        const isActive = activeTab === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id as any)}
+            className={`admin-hero-tab ${isActive ? 'is-active' : ''}`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  </div>
+</section>
+
+      {/* Analytics KPI Row */}
+      {/* Analytics KPI Row */}
+<section className="role-analytics" aria-label="Administration overview">
+  <div className="role-kpi-grid">
+
+    <div className="role-kpi role-kpi-gold">
+      <div className="role-kpi-icon">
+        <BookOpen className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Active Policies</span>
+        <strong>{activePolicyCount}</strong>
+        <small>{policies.length} total indexed in knowledge base</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-olive">
+      <div className="role-kpi-icon">
+        <Grid className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Support Rules</span>
+        <strong>{ruleMatrix.length}</strong>
+        <small>Deterministic routing matrix</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-sienna">
+      <div className="role-kpi-icon">
+        <FileCode className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>AI Templates</span>
+        <strong>{promptTemplates.length}</strong>
+        <small>Active prompt directives</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-mahogany">
+      <div className="role-kpi-icon">
+        <Users className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Team Accounts</span>
+        <strong>{users.length}</strong>
+        <small>Across 5 enterprise roles</small>
+      </div>
+    </div>
+
+  </div>
+</section>
 
       {/* ============================================================
           TAB: POLICIES
@@ -552,70 +556,105 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           )}
 
           {/* Policy Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {visiblePolicies.map((pol) => (
-              <div key={pol.id} className="p-5 rounded-2xl bg-white border border-[#C0BCB1] shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)]">
-                      {pol.id}
-                    </span>
-                    <span className="text-[10px] font-bold text-[#6B6B6B]">v{pol.version}</span>
-                  </div>
+<div className="admin-policy-grid">
+  {visiblePolicies.map((pol) => (
+    <article key={pol.id} className="admin-policy-card">
 
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1]">
-                      {pol.status}
-                    </span>
-                    {onTogglePolicyStatus && (
-                      <button
-                        onClick={() => onTogglePolicyStatus(pol.id, pol.status === 'Active' ? 'Superseded' : 'Active')}
-                        className="text-[10px] text-[#D21515] hover:underline cursor-pointer"
-                      >
-                        {pol.status === 'Active' ? 'Mark Outdated' : 'Set Active'}
-                      </button>
-                    )}
-                    <button onClick={() => onDeletePolicy(pol.id)} className="p-1 text-[#6B6B6B] hover:text-[#D21515] cursor-pointer">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
+      {/* Top strip: doc ID + version + status + actions */}
+      <div className="admin-policy-head">
+        <div className="admin-policy-head-left">
+          <span className="admin-policy-id">
+            <FileText className="w-3 h-3" />
+            {pol.id}
+          </span>
+          <span className="admin-policy-version">v{pol.version}</span>
+        </div>
 
-                <h3 className="text-sm font-bold text-[#171717]">{pol.title}</h3>
-                <p className="text-xs text-[#3A3A3A] line-clamp-2">{pol.summary}</p>
+        <div className="admin-policy-head-right">
+          <span className={`admin-policy-status status-${(pol.status || 'active').toLowerCase()}`}>
+            {pol.status}
+          </span>
 
-                <div className="pt-2 border-t border-[#E4E2DC] flex items-center justify-between text-[11px] text-[#6B6B6B]">
-                  <span>{(pol.sections ?? []).length} Traceable Sections</span>
-                  <button onClick={() => setInspectPolicyChunks(pol)} className="text-[#D21515] font-semibold cursor-pointer">
-                    Inspect Chunks →
+          {onTogglePolicyStatus && (
+            <button
+              type="button"
+              onClick={() => onTogglePolicyStatus(pol.id, pol.status === 'Active' ? 'Superseded' : 'Active')}
+              className="admin-policy-toggle"
+            >
+              {pol.status === 'Active' ? 'Mark Outdated' : 'Set Active'}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onDeletePolicy(pol.id)}
+            className="admin-policy-delete"
+            aria-label="Delete policy"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Title + summary */}
+      <h3 className="admin-policy-title">{pol.title}</h3>
+      <p className="admin-policy-summary">{pol.summary}</p>
+
+      {/* Meta footer */}
+      <div className="admin-policy-meta">
+        <span className="admin-policy-meta-count">
+          <Layers className="w-3.5 h-3.5" />
+          {(pol.sections ?? []).length} traceable section{(pol.sections ?? []).length === 1 ? '' : 's'}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => setInspectPolicyChunks(pol)}
+          className="admin-policy-inspect"
+        >
+          Inspect Chunks
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Version history */}
+      {(pol.versionHistory ?? []).length > 0 && (
+        <div className="admin-policy-history">
+          <span className="admin-policy-history-label">
+            Version History ({(pol.versionHistory ?? []).length})
+          </span>
+          <div className="admin-policy-history-list">
+            {(pol.versionHistory ?? []).map((vh, vIdx) => (
+              <div key={vIdx} className="admin-policy-history-row">
+                <span className="admin-policy-history-meta">
+                  <strong>v{vh.version}</strong>
+                  <span className="admin-policy-history-sep">·</span>
+                  <span>{vh.effectiveDate}</span>
+                  {vh.summary && (
+                    <>
+                      <span className="admin-policy-history-sep">·</span>
+                      <span className="admin-policy-history-summary">{vh.summary}</span>
+                    </>
+                  )}
+                </span>
+
+                {onRollbackPolicy && (
+                  <button
+                    type="button"
+                    onClick={() => onRollbackPolicy(pol.id, vh.version)}
+                    className="admin-policy-rollback"
+                  >
+                    Rollback
                   </button>
-                </div>
-
-                {(pol.versionHistory ?? []).length > 0 && (
-                  <div className="pt-2 space-y-1.5 border-t border-[#E4E2DC]">
-                    <span className="text-[10px] font-bold uppercase tracking-wider block text-[#6B6B6B]">
-                      Version History ({(pol.versionHistory ?? []).length})
-                    </span>
-                    <div className="space-y-1 max-h-24 overflow-y-auto">
-                      {(pol.versionHistory ?? []).map((vh, vIdx) => (
-                        <div key={vIdx} className="flex items-center justify-between p-1.5 rounded text-[10px] bg-[#F0EFEA] border border-[#C0BCB1]">
-                          <span className="truncate">v{vh.version} ({vh.effectiveDate}) - {vh.summary}</span>
-                          {onRollbackPolicy && (
-                            <button
-                              onClick={() => onRollbackPolicy(pol.id, vh.version)}
-                              className="px-2 py-0.5 rounded text-[9px] font-semibold bg-white text-[#D21515] border border-[#C0BCB1] shrink-0 ml-2"
-                            >
-                              Rollback
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
               </div>
             ))}
           </div>
+        </div>
+      )}
+    </article>
+  ))}
+</div>
           <Pagination page={currentPolicyPage} pageSize={adminPageSize} totalItems={policies.length} onPageChange={setPolicyPage} />
         </div>
       )}

@@ -6,6 +6,10 @@ import {
   Clock,
   Download,
   Building,
+  Activity,
+  AlertTriangle,
+  FileText,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface ManagerDashboardProps {
@@ -101,88 +105,114 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   };
 
   return (
-    <div className="manager-dashboard role-dashboard space-y-6">
-      {/* Header */}
-      <div className="rounded-2xl p-6 md:p-7 bg-white border border-[#C0BCB1] shadow-[0_6px_0_rgba(23,23,23,0.05),0_20px_45px_rgba(23,23,23,0.06)] relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C0BCB1] via-[#D21515] to-[#C0BCB1]" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)] font-mono">
-                Team Overview
-              </span>
-              <span className="text-xs text-[#6B6B6B]">
-                SLA Compliance & Triaging Operations
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#171717] mt-1.5 tracking-tight">
-              Operations & SLA Dashboard
-            </h1>
-            <p className="text-xs text-[#6B6B6B] mt-1">
-              Live metrics across department workloads, resolution rates, and SLA breach risks.
-            </p>
-          </div>
+<div className="manager-dashboard role-dashboard manager-page space-y-6">
+        {/* Header */}
+      <section className="manager-hero">
+  <div className="manager-hero-glow" aria-hidden />
 
-          <div className="flex items-center space-x-3">
-            <select
-              value={selectedDept}
-              onChange={(e) => {
-                setSelectedDept(e.target.value);
-                setTablePage(1);
-              }}
-              className="rounded-xl px-3 py-2 text-xs bg-[#F0EFEA] border border-[#C0BCB1] text-[#171717] focus:outline-none focus:border-[#D21515]"
-            >
-              <option value="All">All Departments</option>
-              {departments.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
+  <div className="manager-hero-inner">
 
-            <button
-              onClick={handleExportCSV}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#171717] text-white hover:bg-[#D21515] transition cursor-pointer flex items-center space-x-1.5 shadow-sm"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
+    <div className="manager-hero-left">
+      <div className="manager-hero-eyebrow">
+        <span className="manager-pill">Operations Command</span>
+        <span className="manager-pill-sub">
+          <Activity className="w-3.5 h-3.5" />
+          Live SLA &amp; Team Performance
+        </span>
       </div>
 
+      <h1 className="manager-hero-title">Operations &amp; SLA Dashboard</h1>
+      <p className="manager-hero-sub">
+        Live metrics across department workloads, resolution rates, and SLA breach risks.
+      </p>
+    </div>
+
+    <nav className="manager-hero-nav" aria-label="Manager controls">
+      <div className="manager-hero-dept">
+        <span className="manager-hero-dept-label">Department</span>
+        <select
+          value={selectedDept}
+          onChange={(e) => {
+            setSelectedDept(e.target.value);
+            setTablePage(1);
+          }}
+          className="manager-hero-dept-select"
+        >
+          <option value="All">All Departments</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleExportCSV}
+        className="manager-hero-export"
+      >
+        <Download className="w-3.5 h-3.5" />
+        <span>Export CSV</span>
+      </button>
+    </nav>
+  </div>
+</section>
       {/* KPI Cards */}
-      <div className="role-kpi-grid">
-        <div className="role-kpi role-kpi-gold">
-          <span>Total Requests</span>
-          <strong>{total}</strong>
-          <small>
-            Dept: {selectedDept} · <span className="font-semibold text-[#171717]">{resolved} Resolved</span>
-          </small>
-        </div>
+      {/* KPI Cards */}
+<div className="role-kpi-grid">
 
-        <div className="role-kpi role-kpi-olive">
-          <span>Verification Rate</span>
-          <strong>{autoVerificationRate}%</strong>
-          <small>
-            <span>{verified} Verified</span> · {manualReview} In Review
-          </small>
-        </div>
+  <div className="role-kpi role-kpi-gold">
+    <div className="role-kpi-icon">
+      <FileText className="w-5 h-5" />
+    </div>
+    <div className="role-kpi-body">
+      <span>Total Requests</span>
+      <strong>{total}</strong>
+      <small>
+        Dept: {selectedDept} · {resolved} Resolved
+      </small>
+    </div>
+  </div>
 
-        <div className="role-kpi role-kpi-sienna">
-          <span>Within SLA</span>
-          <strong>{slaComplianceRate}%</strong>
-          <small>
-            <span className={slaBreached > 0 ? 'text-[#D21515] font-semibold' : ''}>{slaBreached} Breached</span> · {slaApproaching} Approaching
-          </small>
-        </div>
+  <div className="role-kpi role-kpi-olive">
+    <div className="role-kpi-icon">
+      <ShieldCheck className="w-5 h-5" />
+    </div>
+    <div className="role-kpi-body">
+      <span>Verification Rate</span>
+      <strong>{autoVerificationRate}%</strong>
+      <small>
+        {verified} Verified · {manualReview} In Review
+      </small>
+    </div>
+  </div>
 
-        <div className="role-kpi role-kpi-mahogany">
-          <span>Escalations</span>
-          <strong>{escalated}</strong>
-          <small>
-            Of all cases · <span className="text-[#D21515] font-semibold">{total > 0 ? Math.round((escalated / total) * 100) : 0}%</span>
-          </small>
-        </div>
-      </div>
+  <div className="role-kpi role-kpi-sienna">
+    <div className="role-kpi-icon">
+      <Clock className="w-5 h-5" />
+    </div>
+    <div className="role-kpi-body">
+      <span>Within SLA</span>
+      <strong>{slaComplianceRate}%</strong>
+      <small>
+        {slaBreached} Breached · {slaApproaching} Approaching
+      </small>
+    </div>
+  </div>
+
+  <div className="role-kpi role-kpi-mahogany">
+    <div className="role-kpi-icon">
+      <AlertTriangle className="w-5 h-5" />
+    </div>
+    <div className="role-kpi-body">
+      <span>Escalations</span>
+      <strong>{escalated}</strong>
+      <small>
+        Of all cases · {total > 0 ? Math.round((escalated / total) * 100) : 0}%
+      </small>
+    </div>
+  </div>
+
+</div>
 
       {/* Distribution Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

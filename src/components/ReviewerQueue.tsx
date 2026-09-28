@@ -107,67 +107,105 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
   return (
     <div className="reviewer-dashboard role-dashboard space-y-6">
       {/* Hero Banner */}
-      <div className="rounded-2xl p-6 md:p-7 bg-white border border-[#C0BCB1] shadow-[0_6px_0_rgba(23,23,23,0.04),0_20px_45px_rgba(23,23,23,0.06)] relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C0BCB1] via-[#D21515] to-[#C0BCB1]" />
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-[rgba(210,21,21,0.08)] text-[#D21515] border border-[rgba(210,21,21,0.25)] font-mono flex items-center">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Reviewer Queue
-              </span>
-              <span className="text-xs text-[#6B6B6B]">
-                Dual-Pipeline Discrepancy & Safety Inspection
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#171717] mt-1.5 tracking-tight">
-              QA Adjudication & Compliance Queue
-            </h1>
-            <p className="text-xs text-[#6B6B6B] mt-1">
-              Audit flagged cases, investigate AI policy deviations, and execute binding decision overrides.
-            </p>
-          </div>
+      <section className="reviewer-hero">
+  <div className="reviewer-hero-glow" aria-hidden />
 
-          <div className="bg-[#F0EFEA] border border-[#C0BCB1] p-3 rounded-2xl flex items-center space-x-4">
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-[#6B6B6B] block font-mono">Pending Review</span>
-              <span className="text-2xl font-mono font-bold text-[#D21515]">{queueCases.length}</span>
-            </div>
-            <div className="w-px h-8 bg-[#C0BCB1]" />
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-[#6B6B6B] block font-mono">Total Inflow</span>
-              <span className="text-2xl font-mono font-bold text-[#171717]">{complaints.length}</span>
-            </div>
-          </div>
-        </div>
+  <div className="reviewer-hero-inner">
+
+    {/* LEFT — badge + title + subtitle */}
+    <div className="reviewer-hero-left">
+      <div className="reviewer-hero-eyebrow">
+        <span className="reviewer-pill">
+          <AlertTriangle className="w-3 h-3" />
+          Reviewer Queue
+        </span>
+        <span className="reviewer-pill-sub">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          Dual-Pipeline Discrepancy &amp; Safety Inspection
+        </span>
       </div>
+
+      <h1 className="reviewer-hero-title">QA Adjudication &amp; Compliance Queue</h1>
+      <p className="reviewer-hero-sub">
+        Audit flagged cases, investigate AI policy deviations, and execute binding decision overrides.
+      </p>
+    </div>
+
+    {/* RIGHT — live reviewer counters */}
+    <div className="reviewer-hero-stats" role="group" aria-label="Review queue snapshot">
+
+      <div className="reviewer-stat reviewer-stat-primary">
+        <span className="reviewer-stat-label">Pending Review</span>
+        <strong className="reviewer-stat-value">{queueCases.length}</strong>
+        <span className="reviewer-stat-hint">Awaiting adjudication</span>
+      </div>
+
+      <div className="reviewer-stat">
+        <span className="reviewer-stat-label">Unsafe Flags</span>
+        <strong className="reviewer-stat-value">{reviewFlaggedCount}</strong>
+        <span className="reviewer-stat-hint">Injections trapped</span>
+      </div>
+
+      <div className="reviewer-stat">
+        <span className="reviewer-stat-label">Total Inflow</span>
+        <strong className="reviewer-stat-value">{complaints.length}</strong>
+        <span className="reviewer-stat-hint">All tickets</span>
+      </div>
+
+    </div>
+  </div>
+</section>
 
       {/* KPI Stats */}
       <section className="role-analytics" aria-label="Review workload overview">
-        <div className="role-kpi-grid">
-          <div className="role-kpi role-kpi-gold">
-            <span>Pending Review</span>
-            <strong>{queueCases.length}</strong>
-            <small>Awaiting human adjudication</small>
-          </div>
-          <div className="role-kpi role-kpi-olive">
-            <span>Cleared Status</span>
-            <strong>{reviewVerified}</strong>
-            <small>Passed dual-pipeline checks</small>
-          </div>
-          <div className="role-kpi role-kpi-mahogany">
-            <span>Unsafe Injections</span>
-            <strong>{reviewFlaggedCount}</strong>
-            <small>Prompt threats intercepted</small>
-          </div>
-          <div className="role-kpi role-kpi-sienna">
-            <span>Promise Flags</span>
-            <strong>{reviewPromiseCount}</strong>
-            <small>Unauthorized refund claims</small>
-          </div>
-        </div>
-      </section>
+  <div className="role-kpi-grid">
+
+    <div className="role-kpi role-kpi-gold">
+      <div className="role-kpi-icon">
+        <AlertTriangle className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Pending Review</span>
+        <strong>{queueCases.length}</strong>
+        <small>Awaiting human adjudication</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-olive">
+      <div className="role-kpi-icon">
+        <ShieldCheck className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Cleared Status</span>
+        <strong>{reviewVerified}</strong>
+        <small>Passed dual-pipeline checks</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-mahogany">
+      <div className="role-kpi-icon">
+        <ShieldAlert className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Unsafe Injections</span>
+        <strong>{reviewFlaggedCount}</strong>
+        <small>Prompt threats intercepted</small>
+      </div>
+    </div>
+
+    <div className="role-kpi role-kpi-sienna">
+      <div className="role-kpi-icon">
+        <XCircle className="w-5 h-5" />
+      </div>
+      <div className="role-kpi-body">
+        <span>Promise Flags</span>
+        <strong>{reviewPromiseCount}</strong>
+        <small>Unauthorized refund claims</small>
+      </div>
+    </div>
+
+  </div>
+</section>
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

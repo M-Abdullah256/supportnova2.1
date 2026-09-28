@@ -242,7 +242,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
       <div className="auth-layout">
         <section className="auth-hero">
           <div className="auth-brand">
-            <span className="auth-brand-mark"><BrandMark className="w-5 h-5" /></span>
             <span>SupportNova</span>
           </div>
 
@@ -268,10 +267,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
 
         <div className="auth-form-column">
           <div className="auth-card p-6 sm:p-7">
-            <div className="flex items-center gap-2 mb-6">
-              <span style={{ color: '#D21515' }}><BrandMark className="w-5 h-5" /></span>
-              <span className="text-[11px] font-semibold tracking-[0.28em] uppercase" style={{ color: '#171717' }}>SupportNova</span>
-            </div>
+            <div className="mb-6">
+  <span className="auth-card-brand">SupportNova</span>
+</div>
 
             {errorMessage && (
               <div className="mb-4 flex items-center space-x-2.5 p-3 rounded-xl text-xs" style={{ background: 'rgba(210, 21, 21, 0.08)', border: '1px solid rgba(210, 21, 21, 0.25)', color: '#D21515' }}>
