@@ -15,7 +15,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types/index.ts';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 interface AuthPageProps {
   onLoginSuccess: (user: UserProfile, token: string) => void;
   users: UserProfile[];
@@ -89,7 +89,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }),
@@ -116,7 +116,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +145,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
     }
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail.trim() }),
@@ -172,7 +172,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resetToken: resetToken.trim(), newPassword }),
@@ -193,7 +193,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess, users }) => 
     setSuccessMessage(null);
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),

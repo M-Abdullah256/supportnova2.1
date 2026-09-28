@@ -188,10 +188,9 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       if (authToken) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${authToken}` },
-        }).catch(() => {});
+        await apiFetch('/api/auth/logout', {
+  method: 'POST',
+}).catch(() => {});
       }
     } catch {
       // ignore
