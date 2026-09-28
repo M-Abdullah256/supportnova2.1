@@ -22,7 +22,7 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { INITIAL_USERS, DEPARTMENTS } from './data/initialData';
 import { RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 export default function App() {
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
@@ -82,7 +82,7 @@ export default function App() {
       }
 
       try {
-        const res = await fetch(url, { ...options, headers });
+        const res = await fetch(`${API_BASE_URL}${url}`, { ...options, headers });
         if (res.status === 403) {
           const errData = await res.json().catch(() => ({}));
           showNotification(
