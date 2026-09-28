@@ -1,4 +1,6 @@
-from sqlalchemy import JSON, String, Text
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
 
@@ -28,3 +30,12 @@ class RegisteredUser(JsonEntity):
 
 class PromptTemplate(JsonEntity):
     __tablename__ = "prompt_templates"
+
+
+class ActiveSession(Base):
+    __tablename__ = "active_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

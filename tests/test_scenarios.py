@@ -43,6 +43,11 @@ class TestScenarioExecution(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(app)
+        cls.client.__enter__()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.__exit__(None, None, None)
 
     def test_valid_scenario_executes_assertions(self):
         with patch("main.run_ai_pipeline", return_value=PIPELINE1_SUCCESS):
@@ -226,6 +231,11 @@ class TestScenarioDocumentAPIs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(app)
+        cls.client.__enter__()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.__exit__(None, None, None)
 
     def test_document_upload_is_limited_to_administrators(self):
         body = {"filename": "policy.txt", "rawText": "A valid policy body.", "category": "Operations"}

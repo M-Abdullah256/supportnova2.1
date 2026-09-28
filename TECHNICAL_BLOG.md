@@ -73,7 +73,7 @@ flowchart TD
 
     subgraph DualPipeline ["Dual-Pipeline Intelligence & Validation Engine"]
         subgraph P1 ["Pipeline 1: GenAI Intelligence (ai_pipeline.py)"]
-            GEMINI[Gemini 3.5 Flash: gemini-3.5-flash]
+            GEMINI[Primary 3.5 Flash; fallback 3.5 Flash Lite]
             FAILURE[GenAI Unavailable: Manual Review]
             JSON_NORM[_normalize_model_output Schema Parser]
         end
@@ -112,7 +112,7 @@ flowchart TD
 The lifecycle of a complaint inside SupportNova follows a linear, audited sequence:
 
 1. **Submission & Sanitization:** The user submits a complaint via the React frontend. The FastAPI backend (`main.py`) receives the payload and passes it to `sanitize()`, which normalizes whitespace, strips HTML tags, and removes zero-width characters.
-2. **Pipeline 1 Execution (`ai_pipeline.py`):** The sanitized text, active prompt template, and parsed active knowledge base policies are bundled into a structured prompt and sent to the pinned Google Gemini 3.5 Flash model (`gemini-3.5-flash`, catalog version `3.5-flash-05-2026`). The previous `gemini-2.5-flash` model returned 404 as unavailable to new users during live testing; this versioned catalog entry passed a real generation probe. The response must parse and satisfy the output schema. The call uses at most three total attempts with bounded backoff. Missing credentials, API errors, or invalid output produce a `GENAI_UNAVAILABLE` failure state, not a fabricated analysis.
+2. **Pipeline 1 Execution (`ai_pipeline.py`):** The sanitized text, active prompt template, and parsed active knowledge base policies are bundled into a structured prompt and sent first to `GENAI_MODEL_ID` (default `gemini-3.5-flash`). If the primary exhausts retries for HTTP 429/503, configured pinned fallbacks are tried in order; `gemini-3.5-flash-lite` is the verified default fallback. Each model gets up to four attempts for 429/503 and timeouts, with exponential backoff and small jitter. With a 30-second request timeout, the bound is 127.75 seconds per model (255.5 seconds for the default primary-plus-fallback pair). HTTP 400/401/403/404 fail immediately. The response must parse and satisfy the output schema. Missing credentials, provider errors, or invalid output produce a `GENAI_UNAVAILABLE` failure state, not a fabricated analysis.
 3. **Pipeline 2 Execution (`rule_engine.py`):** After a valid Pipeline 1 result, the complaint is analyzed by the deterministic Python Rule Engine. It scans for trigger conditions, categorizes expected urgency and priority (independent of sentiment), determines mandatory escalation tiers, and retrieves expected policy document IDs. If Pipeline 1 is unavailable, comparison processing is skipped.
 4. **Python Crosscheck Validation (`validator.py`):** For completed Pipeline 1 runs, the native Python validator executes schema checks, scans for adversarial prompt injections, checks cited policy IDs against active database records to detect hallucinations, and flags unauthorized financial commitments.
 5. **Consensus & Override Scoring (`compare_outputs()`):** Completed Pipeline 1 and Pipeline 2 results are compared. A numeric **Verification Score (0–100)** is calculated. If discrepancies or security flags exist, `groundTruthBlocked` is set to `True` and the status is forced to **`Manual Review`**. An unavailable Pipeline 1 has no consensus score and is routed directly to manual review.
@@ -122,7 +122,7 @@ The lifecycle of a complaint inside SupportNova follows a linear, audited sequen
 
 ## 4. Pipeline 1: Google Gemini Generative Intelligence Integration
 
-Pipeline 1 serves as SupportNova’s generative intelligence engine. Implemented in `ai_pipeline.py`, it uses the official `google-genai` SDK with the pinned `gemini-3.5-flash` model (catalog version `3.5-flash-05-2026`). The prior `gemini-2.5-flash` model became unavailable to new users during integration testing.
+Pipeline 1 serves as SupportNova’s generative intelligence engine. Implemented in `ai_pipeline.py`, it uses the official `google-genai` SDK with a configurable primary (`GENAI_MODEL_ID`, default `gemini-3.5-flash`) and ordered pinned fallbacks (`GENAI_FALLBACK_MODEL_IDS`, default `gemini-3.5-flash-lite`). Both defaults were verified with the configured key for `generateContent`.
 
 ### Key Functional Responsibilities of Pipeline 1
 
@@ -135,21 +135,11 @@ Pipeline 1 serves as SupportNova’s generative intelligence engine. Implemented
 * **Draft Response & Guidance:** Generates empathetic customer draft responses, follow-up messages, internal agent guidance notes, and clarification queries.
 * **Adversarial Self-Analysis:** Generates an `adversarialAnalysis` block identifying threat types and recommended actions.
 
-### Implementation Snippet: Calling Gemini with System Security Delimiters
+### Retry, Failover, and Manual Probe
 
-```python
-for attempt in range(1, 4):
-  try:
-    raw_text = _generate_content(prompt, api_key)
-    parsed = _validate_model_output(json.loads(raw_text))
-    return _normalize_model_output(parsed, raw_text)
-  except Exception as error:
-    LOGGER.warning("Pipeline 1: GenAI attempt %d/3 failed: %s", attempt, error)
-    if attempt < 3:
-      time.sleep(0.25 * (2 ** (attempt - 1)))
+Transient 429/503 responses and timeouts receive up to four attempts per model with 1/2/4-second exponential backoff plus up to 0.25 seconds of jitter on each wait. SDK-internal retries are disabled so the bound is predictable. A 30-second request timeout yields at most 127.75 seconds per model; the default two-model sequence is bounded by 255.5 seconds. Non-retryable 400/401/403/404 errors stop immediately. An administrator can manually call `GET /api/health/genai` to check the configured primary; it performs one minimal request and is not run automatically.
 
-return _genai_failure(last_error, last_error_code, attempts=3)
-```
+Successful records identify the actual producing model using `modelUsed`, include `fallbackUsed`, and track `attemptsPerModel`. If every configured model fails, the saved result remains `GENAI_UNAVAILABLE` with no fabricated category or response.
 
 The model temperature is set to `0.1`; every response is parsed and structurally validated before it can enter the comparison workflow. A missing API key or exhausted/invalid response returns `pipelineStatus: "GENAI_UNAVAILABLE"` with error metadata, skips Pipeline 2 comparison, and queues the complaint for human triage. An offline preview helper, when invoked directly for demonstration, identifies itself as `OFFLINE_DEMO_MODE_NOT_GENAI` and is not used by complaint processing.
 

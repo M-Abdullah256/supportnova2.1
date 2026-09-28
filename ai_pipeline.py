@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import random
 import re
 import time
 from datetime import datetime, timezone
@@ -8,8 +9,92 @@ from typing import Any
 
 
 LOGGER = logging.getLogger(__name__)
-GENAI_MODEL_ID = "gemini-3.5-flash"
+GENAI_MODEL_ID = os.getenv("GENAI_MODEL_ID", "gemini-3.5-flash").strip()
+GENAI_DEFAULT_FALLBACK_MODEL_IDS = ("gemini-3.5-flash-lite",)
 GENAI_MODEL_VERSION = "3.5-flash-05-2026"
+GENAI_REQUEST_TIMEOUT_MS = 30_000
+GENAI_MAX_ATTEMPTS = 4
+GENAI_BACKOFF_BASE_SECONDS = 1.0
+GENAI_BACKOFF_JITTER_SECONDS = 0.25
+
+
+def _configured_models() -> list[str]:
+    primary = os.getenv("GENAI_MODEL_ID", GENAI_MODEL_ID).strip()
+    fallback_config = os.getenv("GENAI_FALLBACK_MODEL_IDS")
+    fallbacks = (
+        [model.strip() for model in fallback_config.split(",") if model.strip()]
+        if fallback_config is not None
+        else list(GENAI_DEFAULT_FALLBACK_MODEL_IDS)
+    )
+    models = list(dict.fromkeys([primary, *fallbacks]))
+    if not primary or any(model.endswith("-latest") for model in models):
+        raise ValueError("GenAI model IDs must be configured pinned IDs without -latest aliases")
+    return models
+
+
+def _http_status(error: Exception) -> int | None:
+    value = getattr(error, "code", None)
+    return value if isinstance(value, int) else None
+
+
+def _is_timeout(error: Exception) -> bool:
+    return isinstance(error, TimeoutError) or error.__class__.__name__ in {
+        "TimeoutException", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout",
+    }
+
+
+def _error_code(error: Exception) -> str:
+    if _is_timeout(error):
+        return "GENAI_TIMEOUT"
+    status = _http_status(error)
+    return {
+        400: "GENAI_INVALID_ARGUMENT",
+        401: "GENAI_UNAUTHENTICATED",
+        403: "GENAI_PERMISSION_DENIED",
+        404: "GENAI_MODEL_NOT_FOUND",
+        429: "GENAI_RATE_LIMITED",
+        503: "GENAI_OVERLOADED",
+    }.get(status, f"GENAI_PROVIDER_ERROR_{status}" if status else "GENAI_REQUEST_FAILED")
+
+
+def check_genai_connectivity() -> dict[str, Any]:
+    model_id = os.getenv("GENAI_MODEL_ID", GENAI_MODEL_ID).strip()
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return {
+            "reachable": False, "model": model_id, "latency_ms": 0,
+            "status_code": None,
+        }
+
+    from google import genai
+
+    started_at = time.monotonic()
+    try:
+        client = genai.Client(
+            api_key=api_key,
+            http_options={
+                "headers": {"User-Agent": "aistudio-build"},
+                "timeout": GENAI_REQUEST_TIMEOUT_MS,
+                "retry_options": {"attempts": 1},
+            },
+        )
+        client.models.generate_content(
+            model=model_id,
+            contents="Reply OK.",
+            config={"max_output_tokens": 8},
+        )
+        status_code = 200
+        reachable = True
+    except Exception as error:
+        status_code = _http_status(error)
+        reachable = False
+        LOGGER.warning("GenAI pre-check failed for %s: %s", model_id, error)
+    return {
+        "reachable": reachable,
+        "model": model_id,
+        "latency_ms": round((time.monotonic() - started_at) * 1000),
+        "status_code": status_code,
+    }
 
 
 def _now() -> str:
@@ -147,13 +232,21 @@ def _validate_model_output(parsed: Any) -> dict[str, Any]:
     return parsed
 
 
-def _normalize_model_output(parsed: dict[str, Any], raw_text: str) -> dict[str, Any]:
+def _normalize_model_output(
+    parsed: dict[str, Any],
+    raw_text: str,
+    model_id: str,
+    primary_model_id: str,
+    attempts_per_model: dict[str, int],
+) -> dict[str, Any]:
     return {
         **parsed,
         "rawJson": raw_text,
-        "modelUsed": GENAI_MODEL_ID,
-        "modelRequested": GENAI_MODEL_ID,
-        "modelVersion": GENAI_MODEL_VERSION,
+        "modelUsed": model_id,
+        "modelRequested": primary_model_id,
+        "modelVersion": GENAI_MODEL_VERSION if model_id == GENAI_MODEL_ID else model_id,
+        "fallbackUsed": model_id != primary_model_id,
+        "attemptsPerModel": attempts_per_model,
         "generatedAt": _now(),
         "pipelineStatus": "COMPLETED",
     }
@@ -213,12 +306,19 @@ def _offline_demo_preview(complaint: dict[str, Any], policies: list[dict[str, An
     return _base_output(complaint, entities, sentiment=sentiment)
 
 
-def _generate_content(prompt: str, api_key: str) -> str:
+def _generate_content(prompt: str, api_key: str, model_id: str) -> str:
     from google import genai
 
-    client = genai.Client(api_key=api_key, http_options={"headers": {"User-Agent": "aistudio-build"}})
+    client = genai.Client(
+        api_key=api_key,
+        http_options={
+            "headers": {"User-Agent": "aistudio-build"},
+            "timeout": GENAI_REQUEST_TIMEOUT_MS,
+            "retry_options": {"attempts": 1},
+        },
+    )
     response = client.models.generate_content(
-        model=GENAI_MODEL_ID,
+        model=model_id,
         contents=[{"role": "user", "parts": [{"text": prompt}]}],
         config={"response_mime_type": "application/json", "temperature": 0.1},
     )
@@ -228,41 +328,84 @@ def _generate_content(prompt: str, api_key: str) -> str:
     return raw_text
 
 
-def _genai_failure(error: str, error_code: str, attempts: int) -> dict[str, Any]:
+def _genai_failure(
+    error: str,
+    error_code: str,
+    attempts: int,
+    primary_model_id: str,
+    attempts_per_model: dict[str, int],
+) -> dict[str, Any]:
     return {
         "pipelineStatus": "GENAI_UNAVAILABLE",
         "errorCode": error_code,
         "error": error,
         "attempts": attempts,
         "modelUsed": None,
-        "modelRequested": GENAI_MODEL_ID,
+        "modelRequested": primary_model_id,
         "modelVersion": GENAI_MODEL_VERSION,
+        "fallbackUsed": any(
+            model_id != primary_model_id and model_attempts > 0
+            for model_id, model_attempts in attempts_per_model.items()
+        ),
+        "attemptsPerModel": attempts_per_model,
         "generatedAt": _now(),
     }
 
 
 def run_ai_pipeline(complaint: dict[str, Any], policies: list[dict[str, Any]], prompt_template: str = "") -> dict[str, Any]:
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         error = "GEMINI_API_KEY is not configured"
         LOGGER.error("Pipeline 1: GenAI unavailable: %s", error)
-        return _genai_failure(error, "GENAI_API_KEY_MISSING", 0)
+        return _genai_failure(error, "GENAI_API_KEY_MISSING", 0, GENAI_MODEL_ID, {})
 
     prompt = f"{prompt_template}\n\n{build_pipeline_prompt(complaint, policies, '')}"
     last_error = "GenAI request failed"
     last_error_code = "GENAI_REQUEST_FAILED"
-    max_attempts = 3
-    for attempt in range(1, max_attempts + 1):
-        try:
-            raw_text = _generate_content(prompt, api_key)
-            parsed = _validate_model_output(json.loads(raw_text))
-            return _normalize_model_output(parsed, raw_text)
-        except Exception as error:
-            last_error = str(error) or error.__class__.__name__
-            last_error_code = "GENAI_INVALID_RESPONSE" if isinstance(error, (json.JSONDecodeError, ValueError)) else "GENAI_REQUEST_FAILED"
-            LOGGER.warning("Pipeline 1: GenAI attempt %d/%d failed: %s", attempt, max_attempts, last_error)
-            if attempt < max_attempts:
-                time.sleep(0.25 * (2 ** (attempt - 1)))
+    try:
+        models = _configured_models()
+    except ValueError as error:
+        return _genai_failure(str(error), "GENAI_INVALID_MODEL_CONFIG", 0, GENAI_MODEL_ID, {})
 
-    LOGGER.error("Pipeline 1: GenAI unavailable after %d attempts: %s", max_attempts, last_error)
-    return _genai_failure(last_error, last_error_code, max_attempts)
+    attempts_per_model: dict[str, int] = {}
+    attempts = 0
+    for model_index, model_id in enumerate(models):
+        attempts_per_model[model_id] = 0
+        for attempt in range(1, GENAI_MAX_ATTEMPTS + 1):
+            attempts += 1
+            attempts_per_model[model_id] = attempt
+            try:
+                raw_text = _generate_content(prompt, api_key, model_id)
+                parsed = _validate_model_output(json.loads(raw_text))
+                return _normalize_model_output(
+                    parsed, raw_text, model_id, models[0], attempts_per_model
+                )
+            except Exception as error:
+                last_error = str(error) or error.__class__.__name__
+                status = _http_status(error)
+                retryable = status in {429, 503} or _is_timeout(error)
+                last_error_code = (
+                    "GENAI_INVALID_RESPONSE"
+                    if isinstance(error, (json.JSONDecodeError, ValueError))
+                    else _error_code(error)
+                )
+                LOGGER.warning(
+                    "Pipeline 1: model %s attempt %d/%d failed: %s",
+                    model_id, attempt, GENAI_MAX_ATTEMPTS, last_error,
+                )
+                if not retryable:
+                    return _genai_failure(
+                        last_error, last_error_code, attempts, models[0], attempts_per_model
+                    )
+                if attempt < GENAI_MAX_ATTEMPTS:
+                    backoff = GENAI_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+                    time.sleep(backoff + random.uniform(0, GENAI_BACKOFF_JITTER_SECONDS))
+                    continue
+                if status in {429, 503} and model_index < len(models) - 1:
+                    break
+                return _genai_failure(
+                    last_error, last_error_code, attempts, models[0], attempts_per_model
+                )
+
+    LOGGER.error("Pipeline 1: GenAI unavailable after %d attempts: %s", attempts, last_error)
+    return _genai_failure(last_error, last_error_code, attempts, models[0], attempts_per_model)

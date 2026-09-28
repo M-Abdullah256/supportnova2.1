@@ -24,7 +24,9 @@ The following AI tools were utilized during the design, implementation, and test
 | **Google DeepMind Antigravity IDE Agent** | Pair Programming & Refactoring | Assisted with project structuring, FastAPI route creation, schema definition, and dataset audit script development. | 100% of generated code was manually inspected, syntax-checked, and unit-tested. |
 | **LLM-assisted Prompt Testing Tools** | Prompt Design & Testing | Used to craft, test, and iterate system prompt delimiters and structured JSON schemas to prevent prompt injection attacks. | Tested against 30 adversarial injection inputs in `test_scenarios.py`. |
 
-The runtime model is pinned to the catalog entry above because `gemini-2.5-flash` returned 404 as unavailable to new users during live testing. `gemini-3.5-flash` passed a real `generateContent` probe.
+The runtime primary defaults to `gemini-3.5-flash`; the verified fallback `gemini-3.5-flash-lite` also passed a live `generateContent` probe for the configured key. Override the primary with `GENAI_MODEL_ID` and provide an ordered, comma-separated list of pinned fallback IDs with `GENAI_FALLBACK_MODEL_IDS`. Verify each candidate supports `generateContent` before configuring it; do not use `-latest` aliases.
+
+For HTTP 429/503 and request timeouts, each configured model gets up to four attempts with exponential backoff (1, 2, and 4 seconds) plus up to 0.25 seconds of jitter per wait. SDK-internal retries are disabled so this bound is predictable. Each SDK request has a 30-second timeout: at most 127.75 seconds per model, or 255.5 seconds for the primary plus one fallback. Other HTTP errors fail immediately with a specific `errorCode`. Successful output records the producing `modelUsed`, `fallbackUsed`, and per-model attempt counts. Administrators may manually call `GET /api/health/genai` to probe the primary; this check does not run automatically.
 
 ---
 

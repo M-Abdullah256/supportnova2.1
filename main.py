@@ -2,6 +2,7 @@ import base64
 from copy import deepcopy
 import hashlib
 import json
+import logging
 import os
 import re
 import secrets
@@ -16,11 +17,23 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
-from ai_pipeline import run_ai_pipeline
+
+def _load_environment(env_file: Path | None = None) -> None:
+    api_key = os.getenv("GEMINI_API_KEY")
+    load_dotenv(
+        env_file or Path(__file__).resolve().parent / ".env",
+        override=api_key is not None and not api_key.strip(),
+    )
+
+
+_load_environment()
+
+from ai_pipeline import check_genai_connectivity, run_ai_pipeline
 from database import SessionLocal, init_db
 from dataset_expansion import expand_seed
-from models import Complaint, Policy, PromptTemplate, RegisteredUser, RuleMatrix
+from models import ActiveSession, Complaint, Policy, PromptTemplate, RegisteredUser, RuleMatrix
 from rule_engine import compare_outputs, run_rule_validation
 from validator import crosscheck_complaint_and_ai, validate_and_parse_document
 
@@ -58,7 +71,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, bool]] = {
     "Manager": {"canSubmitComplaint": True, "canViewAllComplaints": True, "canTriageAndRespond": True, "canReviewAndOverride": True, "canViewAnalytics": True, "canManagePolicies": False, "canManageRuleMatrix": False, "canManagePromptTemplates": False, "canRunSecurityTests": False},
     "Administrator": {"canSubmitComplaint": True, "canViewAllComplaints": True, "canTriageAndRespond": True, "canReviewAndOverride": True, "canViewAnalytics": True, "canManagePolicies": True, "canManageRuleMatrix": True, "canManagePromptTemplates": True, "canRunSecurityTests": True},
 }
-SESSIONS: dict[str, tuple[dict[str, Any], datetime]] = {}
 RESET_TOKENS: dict[str, tuple[str, datetime]] = {}
 
 
@@ -166,6 +178,10 @@ def seed_database() -> None:
 def startup() -> None:
     init_db()
     seed_database()
+    logging.getLogger("uvicorn.error").info(
+        "GEMINI_API_KEY: %s",
+        "configured" if os.getenv("GEMINI_API_KEY", "").strip() else "MISSING",
+    )
 
 
 def current_user(request: Request, db: Session = Depends(db_session)) -> dict[str, Any]:
@@ -175,13 +191,22 @@ def current_user(request: Request, db: Session = Depends(db_session)) -> dict[st
     token = authorization[7:]
     if not token:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    session = SESSIONS.get(token)
-    if session:
-        user, expires = session
-        if expires > datetime.now(timezone.utc):
-            return user
-        SESSIONS.pop(token, None)
-    raise HTTPException(status_code=401, detail="Invalid or expired token")
+    session = db.get(ActiveSession, hashlib.sha256(token.encode()).hexdigest())
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    expires = session.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires <= datetime.now(timezone.utc):
+        db.delete(session)
+        db.commit()
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = db.get(RegisteredUser, session.user_id)
+    if not user:
+        db.delete(session)
+        db.commit()
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return entity_payload(user)
 
 
 def require_roles(*roles: str):
@@ -201,14 +226,31 @@ def error_payload(error: HTTPException) -> dict[str, Any]:
 
 def auth_response(user: dict[str, Any], db: Session, status: int = 200) -> dict[str, Any]:
     token = f"tok_{user['id']}_{secrets.token_hex(8)}"
-    expires = datetime.now(timezone.utc) + timedelta(hours=24)
-    SESSIONS[token] = (user, expires)
+    created = datetime.now(timezone.utc)
+    expires = created + timedelta(hours=24)
+    db.add(ActiveSession(
+        token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        user_id=user["id"],
+        created_at=created,
+        expires_at=expires,
+    ))
+    db.commit()
     return {"user": user, "token": token, "permissions": ROLE_PERMISSIONS[user["role"]], "expiresAt": expires.isoformat(), "message": f"Authenticated successfully as {user['name']} ({user['role']})"}
 
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "uptime": 0, "timestamp": now()}
+    return {
+        "status": "ok",
+        "uptime": 0,
+        "timestamp": now(),
+        "geminiApiKeyConfigured": bool(os.getenv("GEMINI_API_KEY", "").strip()),
+    }
+
+
+@app.get("/api/health/genai")
+def genai_health(_: dict[str, Any] = Depends(require_roles("Administrator"))) -> dict[str, Any]:
+    return check_genai_connectivity()
 
 
 @app.post("/api/auth/register", status_code=201)
@@ -306,10 +348,13 @@ def auth_me(user: dict[str, Any] = Depends(current_user)) -> dict[str, Any]:
 
 
 @app.post("/api/auth/logout")
-def logout(request: Request) -> dict[str, Any]:
+def logout(request: Request, db: Session = Depends(db_session)) -> dict[str, Any]:
     token = request.headers.get("authorization", "")
     if token.startswith("Bearer "):
-        SESSIONS.pop(token[7:], None)
+        session = db.get(ActiveSession, hashlib.sha256(token[7:].encode()).hexdigest())
+        if session:
+            db.delete(session)
+            db.commit()
     return {"success": True, "message": "Logged out successfully"}
 
 
