@@ -369,6 +369,9 @@ export interface PromptTemplate {
 }
 
 export interface SecurityTestCase {
+  adversarialType: ReactNode;
+  title: ReactNode;
+  inputPrompt: ReactNode;
   id: string;
   name: string;
   category: 'Prompt Injection' | 'Sentiment-Urgency Trap' | 'Unsupported Promise' | 'Policy Contradiction' | 'Missing Information';

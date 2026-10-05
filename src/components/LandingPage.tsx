@@ -66,22 +66,23 @@ function Marquee({ items }: { items: string[] }) {
   );
 }
 
-/* ---------------------------------------------------------------- Navigation (Exact Reference Look) */
+/* ---------------------------------------------------------------- Navigation */
 const NAV = [
   { label: "Console", href: "#top" },
   { label: "Dual Pipeline", href: "#intro", count: "(2)" },
-  { label: "Architecture", href: "#services" },
-  { label: "Intelligence", href: "#journal" },
+  { label: "Capabilities", href: "#services" },
+  { label: "Workspaces", href: "#pricing" },
+  { label: "Research", href: "#journal" },
 ];
 
-function Nav({ onLogin }: { onLogin: () => void }) {
+function Nav({ onLogin, onGetStarted }: { onLogin: () => void; onGetStarted: () => void }) {
   return (
-    <header className="fixed inset-x-0 top-0 z-[999] bg-[#0F0F0F]/60 backdrop-blur-md border-b border-[#E6E2D8]/10">
-      <nav className="grid grid-cols-2 items-center gap-4 px-6 py-5 md:grid-cols-4 md:px-12 w-full">
-        {/* SupportNova Logo (Opens Login on click as well) */}
+    <header className="fixed inset-x-0 top-0 z-[999] bg-[#0F0F0F]/80 backdrop-blur-md border-b border-[#E6E2D8]/10">
+      <nav className="grid grid-cols-2 items-center gap-4 px-6 py-4 md:grid-cols-5 md:px-12 w-full">
+        {/* SupportNova Logo */}
         <button
           onClick={onLogin}
-          className="display text-xl tracking-[0.25em] text-[#E6E2D8] text-left hover:text-[#D83B20] transition-colors cursor-pointer"
+          className="display text-lg tracking-[0.25em] text-[#E6E2D8] text-left hover:text-[#D83B20] transition-colors cursor-pointer"
         >
           SupportNova
         </button>
@@ -90,16 +91,13 @@ function Nav({ onLogin }: { onLogin: () => void }) {
           <a
             key={item.label}
             href={item.href}
-            className="label hidden text-[#E6E2D8]/90 transition-colors hover:text-[#D83B20] md:block md:text-center last:md:text-right"
+            className="label hidden text-[#E6E2D8]/80 transition-colors hover:text-[#D83B20] md:block text-center"
           >
             {item.label}
             {item.count ? <sup className="ml-1 text-[#D83B20] font-bold">{item.count}</sup> : null}
           </a>
         ))}
 
-        <button onClick={onLogin} className="label justify-self-end text-[#E6E2D8] md:hidden cursor-pointer">
-          Sign In
-        </button>
       </nav>
     </header>
   );
@@ -172,7 +170,7 @@ function Hero({ onGetStarted }: { onGetStarted: () => void }) {
   );
 }
 
-/* ---------------------------------------------------------------- Intro (Exact Match with Image 2) */
+/* ---------------------------------------------------------------- Intro */
 function Intro() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [progress, setProgress] = useState(0);
@@ -225,7 +223,6 @@ function Intro() {
         <Label>SupportNova Architecture</Label>
       </div>
 
-      {/* Split Kinetic Scroll Text with Exact Phudu Font */}
       <div className="display max-w-6xl text-[6vw] leading-[1.08] md:text-[3vw] space-y-4">
         <div
           style={{
@@ -248,7 +245,6 @@ function Intro() {
         </div>
       </div>
 
-      {/* Bottom 3 Benchmarks matching Image 2 */}
       <div className="mt-16 grid gap-8 border-t border-[#E6E2D8]/15 pt-8 md:grid-cols-3">
         {[
           ["ANALYZE", "WITH GENERATIVE AI"],
@@ -324,7 +320,7 @@ function Impact() {
   );
 }
 
-/* ---------------------------------------------------------------- Services */
+/* ---------------------------------------------------------------- Services (Linked to Workspace) */
 const SERVICES = [
   {
     n: "01",
@@ -363,7 +359,7 @@ const SERVICES = [
   },
 ];
 
-function Services() {
+function Services({ onGetStarted }: { onGetStarted: () => void }) {
   return (
     <section id="services" className="bg-[#E6E2D8] text-[#121212] px-6 py-16 md:px-14 md:py-24 border-t border-[#121212]/15">
       <div className="mb-12 flex flex-wrap items-end justify-between gap-6 border-b border-[#121212]/15 pb-6">
@@ -392,7 +388,9 @@ function Services() {
         {SERVICES.map((s) => (
           <div
             key={s.n}
-            className="group relative grid gap-5 border-b border-[#121212]/15 py-7 md:py-8 px-4 md:px-6 transition-all duration-300 hover:bg-[#121212] hover:text-[#E6E2D8] hover:rounded-xl hover:shadow-[0_20px_40px_rgba(0,0,0,0.25)] md:grid-cols-12 md:items-center"
+            onClick={onGetStarted}
+            title={`Launch ${s.title} workspace`}
+            className="group relative grid gap-5 border-b border-[#121212]/15 py-7 md:py-8 px-4 md:px-6 transition-all duration-300 hover:bg-[#121212] hover:text-[#E6E2D8] hover:rounded-xl hover:shadow-[0_20px_40px_rgba(0,0,0,0.25)] md:grid-cols-12 md:items-center cursor-pointer"
           >
             <div className="md:col-span-1 flex items-center">
               <span className="display text-2xl md:text-3xl text-[#D83B20]">
@@ -425,7 +423,7 @@ function Services() {
                 ))}
               </div>
 
-              <div className="hidden lg:flex h-10 w-10 items-center justify-center rounded-full border border-[#121212]/30 group-hover:border-[#D83B20] group-hover:bg-[#D83B20] group-hover:text-white transition-all ml-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#121212]/30 group-hover:border-[#D83B20] group-hover:bg-[#D83B20] group-hover:text-white transition-all ml-2">
                 <span className="text-base font-bold transition-transform duration-200 group-hover:translate-x-1">
                   →
                 </span>
@@ -477,7 +475,7 @@ const PROCESS_STEPS = [
   },
 ];
 
-function Process() {
+function Process({ onGetStarted }: { onGetStarted: () => void }) {
   return (
     <section className="relative bg-[#121212] px-6 py-28 text-[#E6E2D8] md:px-14 md:py-36 overflow-hidden">
       <div className="relative mb-16 flex flex-wrap items-end justify-between gap-6 border-b border-[#E6E2D8]/15 pb-10">
@@ -502,7 +500,9 @@ function Process() {
         {PROCESS_STEPS.map((s, i) => (
           <div
             key={s.step}
-            className="group relative flex flex-col justify-between border border-[#E6E2D8]/15 bg-[#121212] p-7 transition-all duration-300 hover:border-[#D83B20]/70 hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.6)]"
+            onClick={onGetStarted}
+            title="Launch live interactive workflow"
+            className="group relative flex flex-col justify-between border border-[#E6E2D8]/15 bg-[#121212] p-7 transition-all duration-300 hover:border-[#D83B20]/70 hover:-translate-y-1.5 hover:shadow-[0_12px_24px_-10px_rgba(0,0,0,0.6)] cursor-pointer"
           >
             <div>
               <div className="flex items-center justify-between border-b border-[#E6E2D8]/10 pb-3">
@@ -606,7 +606,7 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
         </div>
         <div className="max-w-md md:text-right">
           <p className="font-mono text-xs md:text-sm uppercase tracking-wider text-[#121212]/70 leading-relaxed font-bold">
-            Designed to satisfy SRS Functional Requirements i &amp; ii.
+            Designed to satisfy SRS Functional Requirements.
           </p>
           <span className="inline-block mt-1 font-mono text-xs text-[#D83B20] font-extrabold">
             Role-Based Access Control • Full Audit Trail
@@ -694,58 +694,27 @@ function Pricing({ onGetStarted }: { onGetStarted: () => void }) {
   );
 }
 
-/* ---------------------------------------------------------------- Notes */
-const NOTES = [
-  ["“SupportNova completely prevented a $500 unauthorized payout by intercepting an adversarial prompt injection.”", "Security Audit", "Adversarial Test Suite"],
-  ["“Decoupling emotion from urgency ensured a politely worded battery fire complaint was instantly escalated to P0.”", "Safety Protocol", "Rule Matrix Engine"],
-  ["“The independent Ground-Truth pipeline guarantees that our support staff never sends ungrounded AI hallucinations.”", "Operations Director", "ResponseX Intelligence"],
-];
-
-function Notes() {
-  return (
-    <section className="bg-[#121212] px-6 py-28 text-[#E6E2D8] md:px-14">
-      <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
-        <SectionTag>Validation Evidence</SectionTag>
-        <h2 className="display max-w-xl text-3xl md:text-5xl text-[#E6E2D8]">
-          Deterministic compliance where standalone AI models fail.
-        </h2>
-      </div>
-      <div className="grid gap-px bg-[#E6E2D8]/15 md:grid-cols-3">
-        {NOTES.map(([quote, name, role]) => (
-          <figure key={name} className="bg-[#121212] p-7">
-            <blockquote className="display text-2xl leading-[1.15] text-[#E6E2D8]">{quote}</blockquote>
-            <figcaption className="mt-8">
-              <div className="label text-[#E6E2D8] font-bold">{name}</div>
-              <div className="label text-[#E6E2D8]/60">{role}</div>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /* ---------------------------------------------------------------- FAQ */
 const FAQS = [
   [
     "Why does SupportNova use two independent processing pipelines?",
-    "Per Section 1.2 of the SRS, Generative AI models must never approve their own output. Pipeline 1 handles natural language interpretation, while Pipeline 2 executes deterministic Python rules to enforce business policies and eliminate hallucinations.",
+    "Generative AI models must never validate their own decisions. Pipeline 1 interprets natural language, while Pipeline 2 executes deterministic rules against approved SOPs.",
   ],
   [
     "How does SupportNova prevent prompt injection attacks?",
-    "All incoming complaint descriptions and uploaded documents are treated as untrusted data within delimited boundaries. Furthermore, Pipeline 2 deterministically re-evaluates routing and priority so adversarial instructions cannot compromise system actions.",
+    "Incoming complaints are evaluated in delimited context blocks and re-checked by Python regex rules to strip instruction override phrases.",
   ],
   [
     "How is customer sentiment separated from actual priority?",
-    "An extremely angry complaint regarding a minor delivery delay remains at P3 based on business risk, while a calm complaint describing a smoking appliance triggers mandatory P0 safety escalation per Rule Matrix specifications.",
+    "Angry complaints regarding minor delivery delays remain P3, while calm complaints reporting overheating batteries are escalated to P1 safety priority.",
   ],
   [
     "What occurs when GenAI and Python validation disagree?",
-    "The Comparison Engine logs a mismatch, prevents automated customer dispatch, and routes the ticket to the Manual Review Queue with both original recommendations preserved in the immutable audit log.",
+    "Discrepancies trigger a manual review flag, pausing automated replies and recording both assessments in an immutable audit trail.",
   ],
   [
-    "How does the platform handle conflicting or outdated company policies?",
-    "SupportNova enforces documented policy precedence. Active policies supersede superseded SOPs and outdated customer FAQs, ensuring resolutions remain grounded only in current organizational rules.",
+    "How does the platform handle conflicting company policies?",
+    "Document versioning guarantees active policies supersede older drafts and FAQs automatically.",
   ],
 ];
 
@@ -759,17 +728,12 @@ function Faq() {
           <div className="flex items-center gap-2">
             <span className="text-[#D83B20] text-sm font-bold">✳</span>
             <span className="font-mono text-xs md:text-sm uppercase tracking-widest text-[#121212] font-bold">
-              SRS Compliance FAQ
+              Compliance &amp; Operations FAQ
             </span>
           </div>
           <h2 className="display mt-3 text-4xl md:text-6xl text-[#121212]">
             System Verification Inquiries
           </h2>
-        </div>
-        <div className="max-w-xl">
-          <p className="font-mono text-xs md:text-sm uppercase tracking-wider text-[#121212] leading-relaxed font-bold">
-            Technical answers grounded in the competition guidelines and evaluation criteria.
-          </p>
         </div>
       </div>
 
@@ -801,14 +765,14 @@ function Faq() {
   );
 }
 
-/* ---------------------------------------------------------------- Journal */
+/* ---------------------------------------------------------------- Journal (Linked) */
 const POSTS = [
   ["Architecture Log · 08 min", "Eliminating Hallucinations: Ground-Truth Python Verification in Customer Support"],
   ["Integrity Protocol · 06 min", "Sentiment vs. Risk: Why Angry Complaints Don't Always Get Top Priority"],
   ["Security Defense · 07 min", "Defeating Prompt Injections and Unauthorized Financial Commitments in Production AI"],
 ];
 
-function Journal() {
+function Journal({ onGetStarted }: { onGetStarted: () => void }) {
   return (
     <section id="journal" className="bg-[#121212] px-6 py-28 text-[#E6E2D8] md:px-14">
       <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
@@ -816,17 +780,25 @@ function Journal() {
         <div className="max-w-xl">
           <h2 className="display text-4xl md:text-5xl text-[#E6E2D8]">Engineering notes &amp; research</h2>
           <p className="label mt-3 text-[#E6E2D8]/60">
-            Documentation of our dual-pipeline architecture per SRS Step 17 requirements.
+            Documentation of our dual-pipeline architecture and prompt injection defense.
           </p>
         </div>
       </div>
       <div className="grid gap-px bg-[#E6E2D8]/15 md:grid-cols-3">
         {POSTS.map(([meta, title]) => (
-          <article key={title} className="group bg-[#121212] p-7">
+          <article
+            key={title}
+            onClick={onGetStarted}
+            title="Read technical specifications"
+            className="group bg-[#121212] p-7 cursor-pointer hover:bg-[#181818] transition-colors"
+          >
             <Label>{meta}</Label>
             <h3 className="display mt-6 text-2xl leading-[1.1] transition-colors group-hover:text-[#D83B20] text-[#E6E2D8]">
               {title}
             </h3>
+            <span className="inline-block mt-4 text-xs font-mono text-[#D83B20] group-hover:underline">
+              Explore Live Demo →
+            </span>
           </article>
         ))}
       </div>
@@ -865,13 +837,30 @@ function RotatingFooterStamp() {
   );
 }
 
-/* ---------------------------------------------------------------- Footer */
+/* ---------------------------------------------------------------- Footer with Working Subscribe Form */
 function Footer({ onLogin, onGetStarted }: { onLogin: () => void; onGetStarted: () => void }) {
+  const [emailInput, setEmailInput] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError("");
+    if (!emailInput.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setSubscribed(true);
+    setEmailInput("");
+    setTimeout(() => setSubscribed(false), 4000);
+  };
+
   const footerLinks = [
-    { label: "HOME", href: "#top" },
-    { label: "ABOUT", href: "#intro" },
-    { label: "WORKS", href: "#services" },
-    { label: "JOURNAL", href: "#journal" },
+    { label: "CONSOLE", href: "#top" },
+    { label: "PIPELINES", href: "#intro" },
+    { label: "CAPABILITIES", href: "#services" },
+    { label: "WORKSPACES", href: "#pricing" },
+    { label: "RESEARCH", href: "#journal" },
     { label: "FAQ", href: "#faq" },
   ];
 
@@ -886,25 +875,32 @@ function Footer({ onLogin, onGetStarted }: { onLogin: () => void; onGetStarted: 
       <div className="mt-12 grid gap-10 lg:grid-cols-12 items-center">
         <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
           <p className="max-w-md text-sm font-semibold uppercase leading-[1.6] tracking-wide text-[#121212]">
-            BUILDING AUTONOMOUS COMPLAINT INTELLIGENCE, DUAL GROUND-TRUTH PIPELINES, AND IDEAS THAT STICK WITH USERS.
+            BUILDING AUTONOMOUS COMPLAINT INTELLIGENCE, DUAL GROUND-TRUTH PIPELINES, AND RESOLUTION COMPLIANCE.
           </p>
 
-          <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-3">
-            <input
-              type="email"
-              placeholder="YOUR EMAIL"
-              className="bg-[#D83B20] text-white placeholder:text-white/80 px-4 py-2.5 font-mono text-xs uppercase tracking-wider rounded-none focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="font-mono text-xs uppercase tracking-wider text-[#121212] font-bold hover:text-[#D83B20] transition-colors cursor-pointer"
-            >
-              SUBSCRIBE
-            </button>
+          {/* Validated Subscription Form */}
+          <form onSubmit={handleSubscribe} className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="YOUR EMAIL"
+                className="bg-[#D83B20] text-white placeholder:text-white/80 px-4 py-2.5 font-mono text-xs uppercase tracking-wider rounded-none focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="font-mono text-xs uppercase tracking-wider text-[#121212] font-bold hover:text-[#D83B20] transition-colors cursor-pointer"
+              >
+                {subscribed ? "✓ SUBSCRIBED" : "SUBSCRIBE"}
+              </button>
+            </div>
+            {emailError && <p className="text-[10px] text-[#D83B20] font-mono">{emailError}</p>}
+            {subscribed && <p className="text-[10px] text-[#121212] font-mono font-bold">Thank you for subscribing to updates.</p>}
           </form>
 
           <div className="space-y-1 font-mono text-xs uppercase tracking-wider text-[#121212]/80">
-            <div>RESPONSEX INTELLIGENCE · WORLDWIDE</div>
+            <div>RESPONSEX INTELLIGENCE · ENTERPRISE ED.</div>
             <a
               href="mailto:supportnova@techwiz.internal"
               className="block font-bold hover:text-[#D83B20] transition-colors"
@@ -952,10 +948,13 @@ function Footer({ onLogin, onGetStarted }: { onLogin: () => void; onGetStarted: 
 /* ---------------------------------------------------------------- Main Landing Page */
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
   return (
-    <div className="bg-[#0F0F0F] text-[#EBE9E5] relative selection:bg-[#D83B20] selection:text-white">
-      {/* Exact Fonts & Styles Embedded directly */}
+    <div className="bg-[#0F0F0F] text-[#EBE9E5] relative selection:bg-[#D83B20] selection:text-white scroll-smooth">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&family=Phudu:wght@800;900&display=swap');
+
+        html {
+          scroll-behavior: smooth;
+        }
 
         .display {
           font-family: 'Phudu', sans-serif !important;
@@ -996,8 +995,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
         }
       `}</style>
 
-      {/* Nav matching Image 2 */}
-      <Nav onLogin={onLogin} />
+      {/* Nav */}
+      <Nav onLogin={onLogin} onGetStarted={onGetStarted} />
 
       <main className="relative">
         {/* Layer 1: Hero */}
@@ -1005,7 +1004,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           <Hero onGetStarted={onGetStarted} />
         </div>
 
-        {/* Layer 2: Intro (Matches Image 2 exactly) */}
+        {/* Layer 2: Intro */}
         <div className="sticky top-0 z-20 min-h-screen w-full bg-[#121212] shadow-[0_-30px_60px_rgba(0,0,0,0.6)]">
           <Intro />
         </div>
@@ -1027,12 +1026,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
 
         {/* Layer 4: Services */}
         <div className="relative z-40 w-full bg-[#E6E2D8] shadow-[0_-30px_60px_rgba(0,0,0,0.35)]">
-          <Services />
+          <Services onGetStarted={onGetStarted} />
         </div>
 
         {/* Layer 5: Process */}
         <div className="sticky top-0 z-50 min-h-screen w-full bg-[#121212] shadow-[0_-30px_60px_rgba(0,0,0,0.6)]">
-          <Process />
+          <Process onGetStarted={onGetStarted} />
         </div>
 
         {/* Layer 6: Pricing / Workspaces */}
@@ -1040,24 +1039,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin 
           <Pricing onGetStarted={onGetStarted} />
         </div>
 
-        {/* Layer 7: Notes */}
-        <div className="sticky top-0 z-[70] min-h-screen w-full bg-[#121212] shadow-[0_-30px_60px_rgba(0,0,0,0.6)]">
-          <Notes />
-        </div>
-
-        {/* Layer 8: FAQ */}
-        <div className="relative z-[80] w-full bg-[#E6E2D8] shadow-[0_-30px_60px_rgba(0,0,0,0.35)]">
+        {/* Layer 7: FAQ */}
+        <div className="relative z-[70] w-full bg-[#E6E2D8] shadow-[0_-30px_60px_rgba(0,0,0,0.35)]">
           <Faq />
         </div>
 
-        {/* Layer 9: Journal */}
-        <div className="sticky top-0 z-[90] min-h-screen w-full bg-[#121212] shadow-[0_-30px_60px_rgba(0,0,0,0.6)]">
-          <Journal />
+        {/* Layer 8: Journal */}
+        <div className="sticky top-0 z-[80] min-h-screen w-full bg-[#121212] shadow-[0_-30px_60px_rgba(0,0,0,0.6)]">
+          <Journal onGetStarted={onGetStarted} />
         </div>
       </main>
 
-      {/* Layer 10: Footer */}
-      <div className="relative z-[110] shadow-[0_-30px_60px_rgba(0,0,0,0.4)]">
+      {/* Footer */}
+      <div className="relative z-[90] shadow-[0_-30px_60px_rgba(0,0,0,0.4)]">
         <Footer onLogin={onLogin} onGetStarted={onGetStarted} />
       </div>
     </div>

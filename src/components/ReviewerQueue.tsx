@@ -9,11 +9,7 @@ import {
   ShieldAlert,
   ExternalLink,
   ShieldCheck,
-  Check,
   XCircle,
-  ArrowUpRight,
-  Shield,
-  FileText,
 } from 'lucide-react';
 
 interface ReviewerQueueProps {
@@ -31,7 +27,6 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
   onReAnalyze,
   departments,
 }) => {
-  // Filter for cases requiring manual review or with low verification scores
   const queueCases = (complaints ?? []).filter(
     (c) =>
       c.pipeline1Output?.pipelineStatus === 'GENAI_UNAVAILABLE' ||
@@ -40,10 +35,6 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
       (c.pipeline2Output && (c.pipeline2Output.adversarialPromptFlags || []).length > 0) ||
       (c.pipeline2Output && (c.pipeline2Output.unsupportedPromiseFlags || []).length > 0)
   );
-
-  const reviewVerified = (complaints ?? []).filter((item) => item.comparisonResult?.verificationStatus === 'Verified').length;
-  const reviewFlaggedCount = queueCases.filter((item) => (item.pipeline2Output?.adversarialPromptFlags?.length ?? 0) > 0).length;
-  const reviewPromiseCount = queueCases.filter((item) => (item.pipeline2Output?.unsupportedPromiseFlags?.length ?? 0) > 0).length;
 
   const [selectedId, setSelectedId] = useState<string | null>(
     (queueCases ?? []).length > 0 ? queueCases[0].id : null
@@ -55,13 +46,14 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
 
   const selected = (complaints ?? []).find((c) => c.id === selectedId);
 
-  // Reviewer Modification Inputs
+  // Reviewer Override State
   const [overrideDept, setOverrideDept] = useState('');
   const [overrideCategory, setOverrideCategory] = useState('');
   const [overrideUrgency, setOverrideUrgency] = useState<UrgencyLevel>('High');
   const [overridePriority, setOverridePriority] = useState<PriorityLevel>('P2');
   const [overrideResponse, setOverrideResponse] = useState('');
   const [reviewerNotes, setReviewerNotes] = useState('');
+  const [decisionError, setDecisionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -72,11 +64,23 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
       setOverridePriority(selected.pipeline2Output?.expectedPriority || 'P2');
       setOverrideResponse(selected.pipeline1Output?.draftedResponse || '');
       setReviewerNotes('');
+      setDecisionError(null);
     }
   }, [selectedId, selected]);
 
   const handleAction = async (decision: 'Approved' | 'Modified' | 'Rejected' | 'Reclassified' | 'Reassigned' | 'Escalated') => {
     if (!selected) return;
+    setDecisionError(null);
+
+    if (decision === 'Modified' && overrideResponse.trim().length < 10) {
+      setDecisionError('Modified customer response must contain at least 10 characters.');
+      return;
+    }
+    if ((decision === 'Rejected' || decision === 'Escalated' || decision === 'Modified') && reviewerNotes.trim().length < 5) {
+      setDecisionError('Audit compliance requires a reason/justification of at least 5 characters in Review Notes.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onReviewDecision(selected.id, {
@@ -86,9 +90,11 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
         overriddenCategory: overrideCategory,
         overriddenUrgency: overrideUrgency,
         overriddenPriority: overridePriority,
-        overriddenResponse: overrideResponse,
-        notes: reviewerNotes || `Reviewer action: ${decision}`,
+        overriddenResponse: overrideResponse.trim(),
+        notes: reviewerNotes.trim() || `Reviewer action: ${decision}`,
       });
+    } catch (err: any) {
+      setDecisionError(err.message || 'Adjudication decision failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -105,337 +111,183 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
   };
 
   return (
-    <div className="reviewer-dashboard role-dashboard space-y-6">
+    <div className="space-y-6 text-[#E6E2D8]">
       {/* Hero Banner */}
-      <section className="reviewer-hero">
-  <div className="reviewer-hero-glow" aria-hidden />
+      <section className="relative overflow-hidden rounded-2xl p-6 sm:p-8 bg-[#121212] border border-[#E6E2D8]/15">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[#D83B20] text-xs">✳</span>
+              <span className="label text-[#E6E2D8]/70">Reviewer Governance Queue</span>
+            </div>
+            <h1 className="display text-3xl sm:text-4xl text-[#E6E2D8]">
+              QA Adjudication &amp; Policy Clearance
+            </h1>
+            <p className="text-xs text-[#E6E2D8]/65 mt-2 max-w-xl leading-relaxed">
+              Investigate AI hallucinations, override routing tiers, and sign off binding decisions for customer communication.
+            </p>
+          </div>
 
-  <div className="reviewer-hero-inner">
-
-    {/* LEFT — badge + title + subtitle */}
-    <div className="reviewer-hero-left">
-      <div className="reviewer-hero-eyebrow">
-        <span className="reviewer-pill">
-          <AlertTriangle className="w-3 h-3" />
-          Reviewer Queue
-        </span>
-        <span className="reviewer-pill-sub">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          Dual-Pipeline Discrepancy &amp; Safety Inspection
-        </span>
-      </div>
-
-      <h1 className="reviewer-hero-title">QA Adjudication &amp; Compliance Queue</h1>
-      <p className="reviewer-hero-sub">
-        Audit flagged cases, investigate AI policy deviations, and execute binding decision overrides.
-      </p>
-    </div>
-
-    {/* RIGHT — live reviewer counters */}
-    <div className="reviewer-hero-stats" role="group" aria-label="Review queue snapshot">
-
-      <div className="reviewer-stat reviewer-stat-primary">
-        <span className="reviewer-stat-label">Pending Review</span>
-        <strong className="reviewer-stat-value">{queueCases.length}</strong>
-        <span className="reviewer-stat-hint">Awaiting adjudication</span>
-      </div>
-
-      <div className="reviewer-stat">
-        <span className="reviewer-stat-label">Unsafe Flags</span>
-        <strong className="reviewer-stat-value">{reviewFlaggedCount}</strong>
-        <span className="reviewer-stat-hint">Injections trapped</span>
-      </div>
-
-      <div className="reviewer-stat">
-        <span className="reviewer-stat-label">Total Inflow</span>
-        <strong className="reviewer-stat-value">{complaints.length}</strong>
-        <span className="reviewer-stat-hint">All tickets</span>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-      {/* KPI Stats */}
-      <section className="role-analytics" aria-label="Review workload overview">
-  <div className="role-kpi-grid">
-
-    <div className="role-kpi role-kpi-gold">
-      <div className="role-kpi-icon">
-        <AlertTriangle className="w-5 h-5" />
-      </div>
-      <div className="role-kpi-body">
-        <span>Pending Review</span>
-        <strong>{queueCases.length}</strong>
-        <small>Awaiting human adjudication</small>
-      </div>
-    </div>
-
-    <div className="role-kpi role-kpi-olive">
-      <div className="role-kpi-icon">
-        <ShieldCheck className="w-5 h-5" />
-      </div>
-      <div className="role-kpi-body">
-        <span>Cleared Status</span>
-        <strong>{reviewVerified}</strong>
-        <small>Passed dual-pipeline checks</small>
-      </div>
-    </div>
-
-    <div className="role-kpi role-kpi-mahogany">
-      <div className="role-kpi-icon">
-        <ShieldAlert className="w-5 h-5" />
-      </div>
-      <div className="role-kpi-body">
-        <span>Unsafe Injections</span>
-        <strong>{reviewFlaggedCount}</strong>
-        <small>Prompt threats intercepted</small>
-      </div>
-    </div>
-
-    <div className="role-kpi role-kpi-sienna">
-      <div className="role-kpi-icon">
-        <XCircle className="w-5 h-5" />
-      </div>
-      <div className="role-kpi-body">
-        <span>Promise Flags</span>
-        <strong>{reviewPromiseCount}</strong>
-        <small>Unauthorized refund claims</small>
-      </div>
-    </div>
-
-  </div>
-</section>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-[#1A1A1A] border border-[#E6E2D8]/15 text-center">
+              <span className="label text-[9px] text-[#E6E2D8]/50 block">FLAGGED INFLOW</span>
+              <span className="display text-2xl text-[#D83B20]">{queueCases.length}</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Case Worklist */}
+        {/* Left: Queue List */}
         <div className="lg:col-span-4 space-y-3">
-          <div className="flex items-center justify-between text-xs text-[#6B6B6B] px-1 font-semibold">
-            <span>Flagged Tickets ({queueCases.length})</span>
-            <span>Priority Queue</span>
+          <div className="flex items-center justify-between text-xs font-mono text-[#E6E2D8]/60 px-1">
+            <span>FLAGGED CASES ({queueCases.length})</span>
+            <span className="text-[#D83B20]">INSPECTION</span>
           </div>
 
-          {queueCases.length === 0 ? (
-            <div className="bg-white border border-[#C0BCB1] rounded-2xl p-8 text-center text-[#6B6B6B] text-xs">
-              <CheckCircle2 className="w-8 h-8 text-[#171717] mx-auto mb-2 opacity-80" />
-              <p className="font-bold text-[#171717]">All Clear</p>
-              <p className="text-[11px] mt-1 text-[#6B6B6B]">Every ticket passed dual-pipeline verification.</p>
-            </div>
-          ) : (
-            visibleQueueCases.map((item) => {
-              const isSelected = item.id === selectedId;
-              const score = item.comparisonResult?.verificationScore ?? 0;
-              const hasAdversarial = (item.pipeline2Output?.adversarialPromptFlags?.length ?? 0) > 0;
-              const hasUnsupported = (item.pipeline2Output?.unsupportedPromiseFlags?.length ?? 0) > 0;
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedId(item.id)}
-                  className={`p-4 rounded-xl border transition cursor-pointer relative bg-white ${
-                    isSelected
-                      ? 'border-[#171717] shadow-sm ring-2 ring-[#171717]'
-                      : 'border-[#C0BCB1] hover:border-[#171717]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-xs font-bold text-[#D21515]">
-                      {item.id}
-                    </span>
-                    <div className="flex items-center space-x-1.5">
-                      {hasAdversarial && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded font-mono bg-[rgba(210,21,21,0.1)] text-[#D21515] border border-[rgba(210,21,21,0.25)]">
-                          UNSAFE
-                        </span>
-                      )}
-                      {hasUnsupported && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded font-mono bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1]">
-                          PROMISE
-                        </span>
-                      )}
-                      <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1]">
-                        {item.pipeline1Output?.pipelineStatus === 'GENAI_UNAVAILABLE' ? 'OFFLINE' : `${score}%`}
+          <div className="space-y-2">
+            {queueCases.length === 0 ? (
+              <div className="bg-[#121212] border border-[#E6E2D8]/15 rounded-2xl p-8 text-center text-[#E6E2D8]/50 text-xs">
+                <CheckCircle2 className="w-8 h-8 text-[#D83B20] mx-auto mb-2" />
+                <p className="display text-base text-[#E6E2D8]">All Clear</p>
+                <p className="text-[11px] text-[#E6E2D8]/50 mt-1">Zero pending policy discrepancies in queue.</p>
+              </div>
+            ) : (
+              visibleQueueCases.map((item) => {
+                const isSelected = item.id === selectedId;
+                const score = item.comparisonResult?.verificationScore ?? 0;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedId(item.id)}
+                    className={`p-4 rounded-xl border transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#181818] border-[#D83B20] shadow-[0_0_15px_rgba(216,59,32,0.15)]'
+                        : 'bg-[#121212] border-[#E6E2D8]/15 hover:border-[#E6E2D8]/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5 font-mono">
+                      <span className="text-xs font-bold text-[#D83B20]">{item.id}</span>
+                      <span className="px-2 py-0.5 text-[10px] rounded bg-[#1C1C1C] text-[#E6E2D8] border border-[#E6E2D8]/15 font-bold">
+                        {score}% Match
                       </span>
                     </div>
+                    <h3 className="text-xs font-bold text-[#E6E2D8] line-clamp-1">{item.title}</h3>
+                    <div className="text-[10px] font-mono text-[#E6E2D8]/50 flex justify-between mt-2">
+                      <span>{item.customerName}</span>
+                      <span className="text-[#D83B20]">{item.comparisonResult?.discrepancies?.length || 0} Flags</span>
+                    </div>
                   </div>
-
-                  <h3 className="text-xs font-semibold text-[#171717] line-clamp-1 mb-1">
-                    {item.title}
-                  </h3>
-
-                  <div className="text-[11px] text-[#6B6B6B] flex items-center justify-between mt-2">
-                    <span className="truncate max-w-[170px]">{item.customerName}</span>
-                    <span className="text-[#D21515] font-mono text-[10px] font-bold">
-                      {item.comparisonResult?.discrepancies?.length || 0} issues
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
           <Pagination page={currentPage} pageSize={pageSize} totalItems={queueCases.length} onPageChange={setListPage} />
         </div>
 
-        {/* Right Column: Case Adjudication Detail */}
+        {/* Right: Adjudication Form & Triangulation Result */}
         <div className="lg:col-span-8">
           {selected ? (
-            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-6 shadow-xs space-y-5">
-              
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E2DC]">
+            <div className="bg-[#121212] rounded-2xl border border-[#E6E2D8]/15 p-6 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E6E2D8]/10">
                 <div>
-                  <div className="flex items-center space-x-2 text-xs">
-                    <span className="font-mono font-bold text-[#D21515]">{selected.id}</span>
-                    <span className="text-[#C0BCB1]">•</span>
-                    <span className="text-[#6B6B6B]">{selected.customerName} ({selected.customerType})</span>
-                    <span className="text-[#C0BCB1]">•</span>
-                    <span className="text-[#6B6B6B]">{new Date(selected.submittedAt).toLocaleDateString()}</span>
+                  <div className="flex items-center space-x-2 text-xs font-mono text-[#E6E2D8]/60">
+                    <span className="text-[#D83B20] font-bold">{selected.id}</span>
+                    <span>•</span>
+                    <span>{selected.customerName} ({selected.customerType})</span>
                   </div>
-                  <h2 className="text-base font-bold text-[#171717] mt-1 tracking-tight">
-                    {selected.title}
-                  </h2>
+                  <h2 className="display text-xl text-[#E6E2D8] mt-1">{selected.title}</h2>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={handleRegenerate}
                     disabled={isSubmitting}
-                    className="px-3 py-1.5 rounded-xl text-xs bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1] hover:border-[#171717] flex items-center space-x-1.5 transition cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono uppercase bg-[#1A1A1A] text-[#E6E2D8] border border-[#E6E2D8]/20 hover:border-[#D83B20] transition cursor-pointer flex items-center space-x-1.5"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin text-[#D21515]' : ''}`} />
-                    <span>Re-Analyze</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin text-[#D83B20]' : ''}`} />
+                    <span>Re-Evaluate</span>
                   </button>
                   <button
                     onClick={() => onSelectComplaint(selected)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171717] text-white hover:bg-[#D21515] transition cursor-pointer flex items-center space-x-1"
+                    className="px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold bg-[#D83B20] text-white hover:bg-[#b82f17] transition cursor-pointer flex items-center space-x-1"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>View Dossier</span>
+                    <span>Dossier</span>
                   </button>
                 </div>
               </div>
 
-              {/* Original Untrusted Customer Text */}
-              <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl p-4 text-xs">
-                <span className="text-[10px] font-mono font-bold text-[#D21515] uppercase tracking-wider block mb-1">
-                  Original Untrusted Complaint Text
-                </span>
-                <p className="text-[#171717] leading-relaxed bg-white p-3 rounded-lg border border-[#C0BCB1]">
-                  {selected.description}
-                </p>
-                <div className="mt-2 text-[11px] text-[#6B6B6B] flex flex-wrap gap-4">
-                  <span>Product: <strong className="text-[#171717]">{selected.productService}</strong></span>
-                  <span>Order: <strong className="text-[#171717]">{selected.orderReference}</strong></span>
-                  <span>Customer Claimed: <strong className="text-[#D21515]">{selected.requestedResolution || 'None'}</strong></span>
-                </div>
-              </div>
-
-              {/* GenAI Unavailable Notice if Applicable */}
-              {selected.pipeline1Output?.pipelineStatus === 'GENAI_UNAVAILABLE' && (
-                <div role="alert" className="border border-[rgba(210,21,21,0.3)] bg-[rgba(210,21,21,0.06)] rounded-xl p-4 text-xs text-[#D21515]">
-                  <strong className="block font-mono uppercase tracking-wider mb-1">GenAI Analysis Unavailable</strong>
-                  <p className="text-[#3A3A3A]">This complaint was not analyzed by GenAI. Manual classification and triage are required.</p>
-                  <p className="mt-1 text-[11px] text-[#6B6B6B]">{selected.pipeline1Output.error} (Attempts: {selected.pipeline1Output.attempts ?? 0})</p>
+              {decisionError && (
+                <div className="p-3 text-xs font-mono bg-[#D83B20]/10 border border-[#D83B20]/30 text-[#D83B20] flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{decisionError}</span>
                 </div>
               )}
 
-              {/* Triangulation Inspection Card */}
-              <div className="border border-[#C0BCB1] rounded-xl overflow-hidden">
-                <div className="bg-[#F0EFEA] px-4 py-2.5 border-b border-[#C0BCB1] flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#171717] flex items-center space-x-1.5 uppercase font-mono">
-                    <ShieldAlert className="w-4 h-4 text-[#D21515]" />
-                    <span>Triangulation Results</span>
-                  </span>
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white text-[#D21515] border border-[#C0BCB1]">
-                    {selected.comparisonResult ? `Agreement Score: ${selected.comparisonResult.verificationScore}%` : 'Not run'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#C0BCB1] text-xs bg-white">
-                  {/* P1 Column */}
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between pb-1 border-b border-[#E4E2DC]">
-                      <span className="font-bold text-[#D21515]">Pipeline 1 (GenAI)</span>
-                      <span className="text-[10px] font-mono text-[#6B6B6B]">
-                        {selected.pipeline1Output?.modelUsed || 'Gemini 1.5'}
-                      </span>
-                    </div>
-                    <div className="space-y-1 text-[#3A3A3A]">
-                      <div>Category: <strong className="text-[#171717]">{selected.pipeline1Output?.category || 'N/A'}</strong></div>
-                      <div>Routing: <strong className="text-[#D21515]">{selected.pipeline1Output?.recommendedDepartment || 'N/A'}</strong></div>
-                      <div>Priority: <strong className="text-[#171717]">{selected.pipeline1Output?.priority} ({selected.pipeline1Output?.urgency})</strong></div>
-                      <div>Escalation: <strong className={selected.pipeline1Output?.escalationRequired ? 'text-[#D21515]' : ''}>{selected.pipeline1Output?.escalationRequired ? `Yes (${selected.pipeline1Output.escalationTier})` : 'No'}</strong></div>
-                    </div>
-                  </div>
-
-                  {/* Python Column */}
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between pb-1 border-b border-[#E4E2DC]">
-                      <span className="font-bold text-[#171717]">Python Crosscheck</span>
-                      <span className="text-[10px] font-mono text-[#6B6B6B]">Python 3.10</span>
-                    </div>
-                    <div className="space-y-1 text-[#3A3A3A]">
-                      <div>Status: <strong className="text-[#171717]">{selected.pythonValidation?.status || 'Validated'}</strong></div>
-                      <div>Score: <strong className="text-[#171717]">{selected.pythonValidation?.validationScore ?? 90}%</strong></div>
-                      <div>Threats: <strong className={(selected.pythonValidation?.adversarialThreats?.length || 0) > 0 ? 'text-[#D21515]' : ''}>{selected.pythonValidation?.adversarialThreats?.length || 0} detected</strong></div>
-                      <div>Findings: <strong className="text-[#171717]">{selected.pythonValidation?.findings?.length || 0} flagged</strong></div>
-                    </div>
-                  </div>
-
-                  {/* P2 Column */}
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between pb-1 border-b border-[#E4E2DC]">
-                      <span className="font-bold text-[#171717]">Pipeline 2 (Matrix)</span>
-                      <span className="text-[10px] font-mono text-[#6B6B6B]">Deterministic</span>
-                    </div>
-                    <div className="space-y-1 text-[#3A3A3A]">
-                      <div>Expected: <strong className="text-[#171717]">{selected.pipeline2Output?.expectedCategory || 'Standard'}</strong></div>
-                      <div>Mandatory Dept: <strong className="text-[#171717] font-semibold">{selected.pipeline2Output?.expectedDepartment || 'General Support'}</strong></div>
-                      <div>Priority: <strong className="text-[#171717]">{selected.pipeline2Output?.expectedPriority} ({selected.pipeline2Output?.expectedUrgency})</strong></div>
-                      <div>Escalation: <strong className={selected.pipeline2Output?.mandatoryEscalation ? 'text-[#D21515]' : ''}>{selected.pipeline2Output?.mandatoryEscalation ? 'MANDATORY' : 'None'}</strong></div>
-                    </div>
-                  </div>
-                </div>
-
-                {selected.comparisonResult?.discrepancies && (selected.comparisonResult.discrepancies || []).length > 0 && (
-                  <div className="bg-[rgba(210,21,21,0.06)] border-t border-[rgba(210,21,21,0.2)] p-3 text-xs text-[#D21515]">
-                    <span className="font-bold block mb-1">Discrepancy Inspector ({selected.comparisonResult.discrepancies.length}):</span>
-                    <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-[#3A3A3A]">
-                      {(selected.comparisonResult.discrepancies || []).map((d, i) => (
-                        <li key={i}>{d}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              {/* Untrusted Complaint Box */}
+              <div className="p-4 rounded-xl bg-[#161616] border border-[#E6E2D8]/10 space-y-1">
+                <span className="label text-[10px] text-[#D83B20]">Original Untrusted Complaint</span>
+                <p className="text-xs text-[#E6E2D8] leading-relaxed font-mono">{selected.description}</p>
               </div>
 
-              {/* Reviewer Action Form */}
-              <div className="bg-[#F0EFEA] border border-[#C0BCB1] rounded-xl p-5 space-y-4">
-                <h3 className="text-xs font-bold text-[#171717] uppercase tracking-wider flex items-center space-x-2">
-                  <Edit3 className="w-4 h-4 text-[#D21515]" />
-                  <span>Execute Adjudication Decision</span>
-                </h3>
+              {/* Triangulation 3-Way Grid */}
+              <div className="p-4 rounded-xl bg-[#141414] border border-[#E6E2D8]/15 space-y-3">
+                <div className="flex items-center justify-between border-b border-[#E6E2D8]/10 pb-2">
+                  <span className="display text-xs text-[#E6E2D8] flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-[#D83B20]" />
+                    <span>Triangulation Inspection Matrix</span>
+                  </span>
+                  <span className="text-xs font-mono text-[#D83B20] font-bold">
+                    Agreement Score: {selected.comparisonResult?.verificationScore}%
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                  <div className="p-3 rounded-lg bg-[#181818] border border-[#E6E2D8]/10 space-y-1">
+                    <span className="text-[10px] text-[#D83B20] font-bold block">1. GenAI Recommendation</span>
+                    <div>Dept: <strong className="text-[#E6E2D8]">{selected.pipeline1Output?.recommendedDepartment}</strong></div>
+                    <div>Urgency: <strong className="text-[#E6E2D8]">{selected.pipeline1Output?.urgency}</strong></div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#181818] border border-[#E6E2D8]/10 space-y-1">
+                    <span className="text-[10px] text-[#E6E2D8] font-bold block">2. Python Crosscheck</span>
+                    <div>Status: <strong className="text-[#E6E2D8]">{selected.pythonValidation?.status}</strong></div>
+                    <div>Score: <strong className="text-[#E6E2D8]">{selected.pythonValidation?.validationScore}%</strong></div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#181818] border border-[#E6E2D8]/10 space-y-1">
+                    <span className="text-[10px] text-[#D83B20] font-bold block">3. Rule Matrix (P2)</span>
+                    <div>Dept: <strong className="text-[#E6E2D8]">{selected.pipeline2Output?.expectedDepartment}</strong></div>
+                    <div>Urgency: <strong className="text-[#E6E2D8]">{selected.pipeline2Output?.expectedUrgency}</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Execution Form */}
+              <div className="p-4 rounded-xl bg-[#141414] border border-[#E6E2D8]/15 space-y-4">
+                <h3 className="display text-xs text-[#E6E2D8]">Binding Review Decision Override</h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#171717] mb-1">Override Department</label>
+                    <label className="label text-[9px] text-[#E6E2D8]/60 block mb-1">Override Dept</label>
                     <select
                       value={overrideDept}
                       onChange={(e) => setOverrideDept(e.target.value)}
-                      className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                      className="w-full p-2 text-xs rounded-lg bg-[#161616] border border-[#E6E2D8]/20 text-[#E6E2D8]"
                     >
                       {departments.map((d) => (
-                        <option key={d} value={d}>{d}</option>
+                        <option key={d} value={d} className="bg-[#141414]">{d}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#171717] mb-1">Override Urgency</label>
+                    <label className="label text-[9px] text-[#E6E2D8]/60 block mb-1">Override Urgency</label>
                     <select
                       value={overrideUrgency}
                       onChange={(e: any) => setOverrideUrgency(e.target.value)}
-                      className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                      className="w-full p-2 text-xs rounded-lg bg-[#161616] border border-[#E6E2D8]/20 text-[#E6E2D8]"
                     >
                       <option value="Low">Low</option>
                       <option value="Medium">Medium</option>
@@ -444,11 +296,11 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#171717] mb-1">Override Priority</label>
+                    <label className="label text-[9px] text-[#E6E2D8]/60 block mb-1">Override Priority</label>
                     <select
                       value={overridePriority}
                       onChange={(e: any) => setOverridePriority(e.target.value)}
-                      className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                      className="w-full p-2 text-xs rounded-lg bg-[#161616] border border-[#E6E2D8]/20 text-[#E6E2D8]"
                     >
                       <option value="P1">P1 (Immediate)</option>
                       <option value="P2">P2 (Urgent)</option>
@@ -459,66 +311,66 @@ export const ReviewerQueue: React.FC<ReviewerQueueProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#171717] mb-1">Adjusted Customer Response Draft</label>
+                  <label className="label text-[9px] text-[#E6E2D8]/60 block mb-1">Adjusted Customer Response Draft</label>
                   <textarea
                     value={overrideResponse}
                     onChange={(e) => setOverrideResponse(e.target.value)}
                     rows={4}
-                    className="w-full rounded-xl p-2.5 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                    className="w-full p-3 text-xs rounded-lg bg-[#161616] border border-[#E6E2D8]/20 text-[#E6E2D8] font-mono focus:border-[#D83B20]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-[#171717] mb-1">Review Notes (Recorded to Audit Trail)</label>
+                  <label className="label text-[9px] text-[#E6E2D8]/60 block mb-1">Audit Justification Notes *</label>
                   <input
                     type="text"
                     value={reviewerNotes}
                     onChange={(e) => setReviewerNotes(e.target.value)}
-                    placeholder="Provide justification for override or approval..."
-                    className="w-full rounded-xl p-2 text-xs bg-white border border-[#C0BCB1] text-[#171717]"
+                    placeholder="Enter policy reasons for override..."
+                    className="w-full p-2 text-xs rounded-lg bg-[#161616] border border-[#E6E2D8]/20 text-[#E6E2D8] font-mono focus:border-[#D83B20]"
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#C0BCB1]">
-                  <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E6E2D8]/10">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleAction('Rejected')}
                       disabled={isSubmitting}
-                      className="px-3.5 py-2 rounded-xl border border-[rgba(210,21,21,0.3)] text-[#D21515] bg-white hover:bg-[rgba(210,21,21,0.06)] text-xs font-semibold cursor-pointer"
+                      className="px-3.5 py-2 rounded-lg border border-[#D83B20]/40 text-[#D83B20] hover:bg-[#D83B20]/10 text-xs font-mono font-bold uppercase transition"
                     >
-                      Reject Request
+                      Reject
                     </button>
                     <button
                       onClick={() => handleAction('Escalated')}
                       disabled={isSubmitting}
-                      className="px-3.5 py-2 rounded-xl border border-[#C0BCB1] text-[#171717] bg-white hover:border-[#171717] text-xs font-semibold cursor-pointer"
+                      className="px-3.5 py-2 rounded-lg border border-[#E6E2D8]/20 text-[#E6E2D8] hover:border-[#D83B20] text-xs font-mono font-bold uppercase transition"
                     >
-                      Escalate to Manager
+                      Escalate
                     </button>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleAction('Modified')}
                       disabled={isSubmitting}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#F0EFEA] text-[#171717] border border-[#C0BCB1] hover:border-[#171717] cursor-pointer"
+                      className="px-4 py-2 rounded-lg text-xs font-mono font-bold uppercase bg-[#1C1C1C] text-[#E6E2D8] border border-[#E6E2D8]/20 hover:border-[#D83B20] transition"
                     >
                       Approve with Changes
                     </button>
                     <button
                       onClick={() => handleAction('Approved')}
                       disabled={isSubmitting}
-                      className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#171717] text-white hover:bg-[#D21515] shadow-xs cursor-pointer"
+                      className="px-5 py-2 rounded-lg text-xs font-mono font-bold uppercase bg-[#D83B20] text-white hover:bg-[#b82f17] transition shadow-md"
                     >
-                      Approve as Suggested
+                      Approve Original
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[#C0BCB1] p-12 text-center text-[#6B6B6B] text-xs">
-              Select a ticket from the queue on the left to begin review.
+            <div className="p-12 text-center text-xs text-[#E6E2D8]/50 bg-[#121212] border border-[#E6E2D8]/15 rounded-2xl">
+              Select a ticket from the left stream to begin adjudication.
             </div>
           )}
         </div>

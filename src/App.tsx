@@ -5,7 +5,6 @@ import type {
   RuleMatrixEntry,
   PromptTemplate,
   SecurityTestCase,
-  UserRole,
   UserProfile,
 } from './types/index.ts';
 import { Navbar } from './components/Navbar';
@@ -15,17 +14,37 @@ import { ReviewerQueue } from './components/ReviewerQueue';
 import { ManagerDashboard } from './components/ManagerDashboard';
 import { AdminPortal } from './components/AdminPortal';
 import { ComplaintDetailModal } from './components/ComplaintDetailModal';
-import { AccessDenied } from './components/AccessDenied';
 import { AuthPage } from './components/AuthPage';
 import { LandingPage } from './components/LandingPage';
 import { UserProfileModal } from './components/UserProfileModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { INITIAL_USERS, DEPARTMENTS } from './data/initialData';
 import { RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export default function App() {
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
+
+  // 1. Theme State for Dashboards & Auth (Defaults to 'dark' and persists in localStorage)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('supportnova_theme');
+      return saved === 'light' || saved === 'dark' ? saved : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('supportnova_theme', next);
+      return next;
+    });
+  }, []);
+
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('supportnova_auth_user');
@@ -62,10 +81,13 @@ export default function App() {
 
   const showNotification = useCallback((type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
-    const timer = setTimeout(() => setNotification(null), 4500);
+    const timer = setTimeout(() => setNotification(null), 5000);
     return () => clearTimeout(timer);
   }, []);
 
+  /**
+   * Universal API Fetch Client with Pydantic (HTTP 422/409/400) Error Parsing
+   */
   const apiFetch = useCallback(
     async (url: string, options: RequestInit = {}): Promise<Response> => {
       const headers = new Headers(options.headers || {});
@@ -83,14 +105,14 @@ export default function App() {
 
       try {
         const res = await fetch(`${API_BASE_URL}${url}`, { ...options, headers });
+
         if (res.status === 403) {
           const errData = await res.json().catch(() => ({}));
-          showNotification(
-            'error',
-            errData.error || 'Access Denied (403): You do not have permission for this action.'
-          );
-          throw new Error(errData.error || 'Access Denied');
+          const msg = errData.error || 'Access Denied (403): Unauthorized operation for your role.';
+          showNotification('error', msg);
+          throw new Error(msg);
         }
+
         if (res.status === 401) {
           showNotification('error', 'Session expired. Please sign in again.');
           setCurrentUser(null);
@@ -100,9 +122,29 @@ export default function App() {
           localStorage.removeItem('supportnova_auth_token');
           throw new Error('Unauthorized');
         }
+
+        if (res.status === 422) {
+          const errData = await res.json().catch(() => ({}));
+          let detailedMsg = errData.error;
+          if (Array.isArray(errData.details) && errData.details.length > 0) {
+            const first = errData.details[0];
+            const field = first.loc?.filter((l: any) => l !== 'body').join('.') || 'input';
+            detailedMsg = `Validation failed on '${field}': ${first.msg}`;
+          }
+          showNotification('error', detailedMsg || 'Validation Error: Check your form inputs.');
+          throw new Error(detailedMsg || 'Validation Error');
+        }
+
+        if (res.status === 400 || res.status === 409) {
+          const errData = await res.json().catch(() => ({}));
+          const msg = errData.error || `Request rejected (${res.status}).`;
+          showNotification('error', msg);
+          throw new Error(msg);
+        }
+
         return res;
       } catch (err: any) {
-        if (!err.message?.includes('Access Denied') && !err.message?.includes('Unauthorized')) {
+        if (!err.message?.includes('Validation Error') && !err.message?.includes('Access Denied')) {
           showNotification('error', err.message || 'Network communication error.');
         }
         throw err;
@@ -162,7 +204,7 @@ export default function App() {
           setUsers(data?.users ?? []);
         }
       } catch (err) {
-        console.error('Failed to load SupportNova data from API:', err);
+        console.error('Failed to load SupportNova data:', err);
       } finally {
         setIsLoading(false);
       }
@@ -182,15 +224,13 @@ export default function App() {
     setShowLanding(false);
     localStorage.setItem('supportnova_auth_user', JSON.stringify(user));
     localStorage.setItem('supportnova_auth_token', token);
-    showNotification('success', `Welcome back, ${user.name}! Accessing ${user.role} workspace.`);
+    showNotification('success', `Welcome, ${user.name}! Accessing ${user.role} workspace.`);
   };
 
   const handleSignOut = async () => {
     try {
       if (authToken) {
-        await apiFetch('/api/auth/logout', {
-  method: 'POST',
-}).catch(() => {});
+        await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
       }
     } catch {
       // ignore
@@ -201,26 +241,22 @@ export default function App() {
     setAuthToken(null);
     setComplaints([]);
     setShowLanding(true);
-    showNotification('success', 'You have been safely signed out.');
+    showNotification('success', 'You have been signed out.');
   };
 
   const handleUpdateProfile = async (updated: Partial<UserProfile>) => {
     if (!currentUser) return;
-    try {
-      const res = await apiFetch(`/api/users/${currentUser.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updated),
-      });
+    const res = await apiFetch(`/api/users/${currentUser.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updated),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentUser(data.user);
-        localStorage.setItem('supportnova_auth_user', JSON.stringify(data.user));
-        setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? data.user : u)));
-        showNotification('success', 'Profile updated successfully.');
-      }
-    } catch (err: any) {
-      showNotification('error', err.message || 'Profile update failed.');
+    if (res.ok) {
+      const data = await res.json();
+      setCurrentUser(data.user);
+      localStorage.setItem('supportnova_auth_user', JSON.stringify(data.user));
+      setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? data.user : u)));
+      showNotification('success', 'Profile updated successfully.');
     }
   };
 
@@ -236,155 +272,119 @@ export default function App() {
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to submit complaint');
+      if (res.ok) {
+        const data = await res.json();
+        setComplaints((prev) => [data.complaint, ...prev]);
+        showNotification(
+          'success',
+          data.complaint.pipeline1Output?.pipelineStatus === 'GENAI_UNAVAILABLE'
+            ? `Complaint ${data.complaint.id} queued for manual verification.`
+            : `Complaint ${data.complaint.id} triaged via Dual-Pipeline Engine.`
+        );
       }
-
-      const data = await res.json();
-      setComplaints((prev) => [data.complaint, ...prev]);
-      showNotification(
-        'success',
-        data.complaint.pipeline1Output?.pipelineStatus === 'GENAI_UNAVAILABLE'
-          ? `Complaint ${data.complaint.id} received and queued for manual review because GenAI analysis is unavailable.`
-          : `Complaint ${data.complaint.id} received and analyzed through GenAI and support rules.`
-      );
-    } catch (err: any) {
-      showNotification('error', err.message || 'Submission error');
-      throw err;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSendMessage = async (complaintId: string, text: string, nextStatus?: any) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({
-          sender: currentUser?.role === 'Customer' ? 'Customer' : 'Agent',
-          senderName: currentUser?.name || 'Support Specialist',
-          text,
-          nextStatus,
-        }),
-      });
+    const res = await apiFetch(`/api/complaints/${complaintId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        sender: currentUser?.role === 'Customer' ? 'Customer' : 'Agent',
+        senderName: currentUser?.name || 'Support Specialist',
+        text,
+        nextStatus,
+      }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification('success', 'Message sent successfully.');
-      }
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      showNotification('error', 'Failed to dispatch message.');
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', 'Message posted.');
     }
   };
 
   const handleCustomerEscalate = async (complaintId: string, reason: string) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/escalate`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      });
+    const res = await apiFetch(`/api/complaints/${complaintId}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification('success', 'Ticket escalated for priority supervisor review.');
-      }
-    } catch (err: any) {
-      showNotification('error', err.message || 'Failed to escalate ticket.');
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', 'Ticket escalated for supervisor review.');
     }
   };
 
   const handleCustomerFeedback = async (complaintId: string, rating: number, feedback: string) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/feedback`, {
-        method: 'POST',
-        body: JSON.stringify({ rating, feedback }),
-      });
+    const res = await apiFetch(`/api/complaints/${complaintId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, feedback }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification('success', 'Thank you! Your CSAT review has been recorded.');
-      }
-    } catch (err: any) {
-      showNotification('error', err.message || 'Failed to submit CSAT review.');
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', 'CSAT evaluation recorded.');
     }
   };
 
   const handleUpdateStatus = async (complaintId: string, status: any, dept?: string, agent?: string) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          status,
-          assignedDepartment: dept,
-          assignedAgent: agent || currentUser?.name,
-          actor: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Agent',
-        }),
-      });
+    const res = await apiFetch(`/api/complaints/${complaintId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status,
+        assignedDepartment: dept,
+        assignedAgent: agent || currentUser?.name,
+        actor: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Agent',
+      }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification('success', `Complaint marked as ${status}.`);
-      }
-    } catch (err) {
-      console.error('Status update failed:', err);
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', `Status updated to ${status}.`);
     }
   };
 
   const handleReviewDecision = async (complaintId: string, decisionData: any) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/review`, {
-        method: 'POST',
-        body: JSON.stringify({
-          ...decisionData,
-          reviewedBy: currentUser?.name || 'Reviewer Specialist',
-        }),
-      });
+    const res = await apiFetch(`/api/complaints/${complaintId}/review`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...decisionData,
+        reviewedBy: currentUser?.name || 'Reviewer Specialist',
+      }),
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification(
-          'success',
-          `Review decision recorded: ${decisionData.decision} on ticket ${complaintId}`
-        );
-      }
-    } catch (err) {
-      console.error('Review decision error:', err);
-      showNotification('error', 'Failed to record reviewer decision.');
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', `Decision: ${decisionData.decision} applied to ${complaintId}`);
     }
   };
 
   const handleReAnalyze = async (complaintId: string) => {
-    try {
-      const res = await apiFetch(`/api/complaints/${complaintId}/re-analyze`, {
-        method: 'POST',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints((prev) =>
-          prev.map((c) => (c.id === complaintId ? data.complaint : c))
-        );
-        showNotification('success', `Ticket ${complaintId} re-analyzed through Dual-Pipeline.`);
-      }
-    } catch (err) {
-      console.error('Re-analyze failed:', err);
-      showNotification('error', 'Failed to re-analyze ticket.');
+    const res = await apiFetch(`/api/complaints/${complaintId}/re-analyze`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setComplaints((prev) =>
+        prev.map((c) => (c.id === complaintId ? data.complaint : c))
+      );
+      showNotification('success', `Ticket ${complaintId} re-evaluated against ground truth.`);
     }
   };
 
@@ -400,28 +400,20 @@ export default function App() {
         const polData = await polRes.json();
         setPolicies(polData?.policies ?? []);
       }
-      showNotification('success', data.message || `Document parsed into ${data.chunkCount} traceable sections.`);
+      showNotification('success', data.message || `Document parsed into ${data.chunkCount} clauses.`);
       return data;
-    } else {
-      const errData = await res.json();
-      throw new Error(errData.error || 'Failed to upload document');
     }
   };
 
   const handleTogglePolicyStatus = async (id: string, newStatus: string) => {
-    try {
-      const res = await apiFetch(`/api/knowledge-base/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPolicies((prev) => prev.map((p) => (p.id === id ? data.policy : p)));
-        showNotification('success', `Policy status set to ${newStatus}.`);
-      }
-    } catch (err) {
-      console.error('Toggle policy status error:', err);
-      showNotification('error', 'Failed to update policy status.');
+    const res = await apiFetch(`/api/knowledge-base/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setPolicies((prev) => prev.map((p) => (p.id === id ? data.policy : p)));
+      showNotification('success', `Policy status updated to ${newStatus}.`);
     }
   };
 
@@ -433,7 +425,7 @@ export default function App() {
     if (res.ok) {
       const data = await res.json();
       setPolicies((prev) => [...prev, data.policy]);
-      showNotification('success', `Policy ${data.policy.id} added to Knowledge Base.`);
+      showNotification('success', `Policy ${data.policy.id} indexed.`);
     }
   };
 
@@ -445,7 +437,7 @@ export default function App() {
     if (res.ok) {
       const data = await res.json();
       setPolicies((prev) => prev.map((p) => (p.id === id ? data.policy : p)));
-      showNotification('success', `Policy ${id} updated.`);
+      showNotification('success', `Policy ${id} saved.`);
     }
   };
 
@@ -453,7 +445,7 @@ export default function App() {
     const res = await apiFetch(`/api/knowledge-base/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setPolicies((prev) => prev.filter((p) => p.id !== id));
-      showNotification('success', `Policy ${id} removed.`);
+      showNotification('success', `Policy ${id} deleted.`);
     }
   };
 
@@ -465,7 +457,7 @@ export default function App() {
     if (res.ok) {
       const data = await res.json();
       setRuleMatrix((prev) => [...prev, data.rule]);
-      showNotification('success', `Rule ${data.rule.id} added to Rule Matrix.`);
+      showNotification('success', `Rule ${data.rule.id} added.`);
     }
   };
 
@@ -497,10 +489,7 @@ export default function App() {
     if (res.ok) {
       const data = await res.json();
       setPromptTemplates((prev) => [...prev, data.promptTemplate]);
-      showNotification('success', `Prompt template '${data.promptTemplate.name}' created.`);
-    } else {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create prompt template');
+      showNotification('success', `Prompt template '${data.promptTemplate.name}' indexed.`);
     }
   };
 
@@ -514,7 +503,7 @@ export default function App() {
       setPromptTemplates((prev) =>
         prev.map((t) => (t.id === id ? data.promptTemplate : t))
       );
-      showNotification('success', data.message || `Prompt template ${id} updated.`);
+      showNotification('success', `Prompt template ${id} updated.`);
     }
   };
 
@@ -564,9 +553,6 @@ export default function App() {
       const data = await res.json();
       setUsers((prev) => [...prev, data.user]);
       showNotification('success', `User ${data.user.name} created.`);
-    } else {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create user');
     }
   };
 
@@ -586,7 +572,7 @@ export default function App() {
     const res = await apiFetch(`/api/users/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      showNotification('success', 'User removed from system.');
+      showNotification('success', 'User removed.');
     }
   };
 
@@ -607,6 +593,7 @@ export default function App() {
     (c) => c.comparisonResult?.verificationStatus === 'Manual Review'
   ).length;
 
+ // VIEW 1: Unauthenticated Flow (Landing Page or Auth Screen)
   if (!currentUser || !authToken) {
     if (showLanding) {
       return (
@@ -618,38 +605,33 @@ export default function App() {
     }
 
     return (
-      <div className="relative min-h-screen bg-[#0F0F0F]">
-        <button
-          onClick={() => setShowLanding(true)}
-          className="fixed top-4 left-4 z-50 px-3 py-1.5 text-xs font-semibold text-neutral-300 bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700 rounded-lg shadow transition cursor-pointer flex items-center gap-1.5"
-        >
-          ← Back to Home
-        </button>
-        <AuthPage onLoginSuccess={handleLoginSuccess} users={users} />
-      </div>
+      <AuthPage 
+        onLoginSuccess={handleLoginSuccess} 
+        users={users}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onBackToHome={() => setShowLanding(true)}
+      />
     );
   }
 
+  // VIEW 2: Authenticated Flow (Dashboards with Scoped data-theme={theme})
   return (
     <ErrorBoundary>
-      <div
-        className="support-app min-h-screen text-slate-100 flex flex-col font-sans selection:bg-[#D21515] selection:text-[#EBE9E5] w-full overflow-x-hidden"
-        style={{
-          background:
-            'radial-gradient(circle at 15% 10%, rgba(210, 21, 21, 0.03), transparent 30rem), #F0EFEA',
-        }}
+      <div 
+        className="support-app min-h-screen theme-canvas flex flex-col font-sans w-full overflow-x-hidden" 
+        data-theme={theme}
       >
         {notification && (
           <div
-            className="fixed bottom-5 right-5 z-50 flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs animate-in fade-in slide-in-from-bottom-2 max-w-md"
-            style={{ background: '#171717', borderColor: 'rgba(235, 233, 229, 0.24)' }}
+            className="fixed bottom-5 right-5 z-[200] flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-2xl border text-xs theme-surface animate-in fade-in"
           >
             {notification.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#D83B20] shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-[#D83B20] shrink-0" />
             )}
-            <span className="text-slate-200 font-medium leading-relaxed">{notification.message}</span>
+            <span className="font-mono">{notification.message}</span>
           </div>
         )}
 
@@ -661,13 +643,15 @@ export default function App() {
           onSearchChange={setSearchQuery}
           onOpenProfileModal={() => setProfileModalOpen(true)}
           onSignOut={handleSignOut}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-24 space-y-3">
-              <RefreshCw className="w-8 h-8 text-[#D21515] animate-spin" />
-              <p className="text-xs text-slate-400 font-medium">
+              <RefreshCw className="w-8 h-8 text-[#D83B20] animate-spin" />
+              <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
                 Loading {currentUser.role} Workspace Data...
               </p>
             </div>
